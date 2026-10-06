@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyLists-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Lets a development build use the API on localhost (uvicorn api.index:app). -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Ramp Ops reads your steps, distance, active energy, heart rate, water and the sound levels your Apple Watch measures, to show how your shift is going and when to drink or wear hearing protection.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Ramp Ops saves the water you log during a shift to Health.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+</dict>
+</plist>
