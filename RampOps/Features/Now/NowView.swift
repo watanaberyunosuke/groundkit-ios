@@ -13,7 +13,7 @@ struct NowView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Clocks(iata: store.airport.iata, timeZone: store.timeZone)
-                    RampStatusCard(status: store.rampStatus)
+                    RampStatusCard(status: store.rampStatus, error: store.snapshotError)
                     MapCard()
                     if let c = store.conditions { WeatherTiles(c: c, status: store.rampStatus) }
                     NextUpCard(title: "Next arrivals", dir: .inbound, board: store.arrivals) { router.tab = .arrivals }
@@ -49,6 +49,8 @@ struct NowView: View {
 /// Warnings open expanded, since their instructions matter.
 struct RampStatusCard: View {
     var status: RampStatus?
+    /// Why there is no status, so a failed load does not look like a slow one.
+    var error: String?
     @State private var expanded: Bool?
 
     var body: some View {
@@ -60,14 +62,16 @@ struct RampStatusCard: View {
                 withAnimation(.snappy) { expanded = !isOpen }
             } label: {
                 HStack(spacing: 12) {
-                    if status == nil {
+                    if status == nil, error != nil {
+                        Image(systemName: "exclamationmark.icloud").font(.title2)
+                    } else if status == nil {
                         ProgressView().tint(.white)
                     } else {
                         Image(systemName: severity.symbol).font(.title2)
                     }
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(status?.headline ?? "Loading weather…").font(.headline)
-                        Text(summary(hazards))
+                        Text(status?.headline ?? (error == nil ? "Loading weather…" : "Airport data unavailable")).font(.headline)
+                        Text(status == nil ? (error ?? summary(hazards)) : summary(hazards))
                             .font(.subheadline)
                             .lineLimit(1)
                             .opacity(0.9)
