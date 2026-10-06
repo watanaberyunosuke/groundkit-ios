@@ -169,7 +169,7 @@ struct FlightDetailView: View {
                 }
                 Section("Identifiers") {
                     LabeledContent("Callsign", value: entry.callsign)
-                    if let hex = entry.aircraft?.icao24 { LabeledContent("Mode S", value: hex.uppercased()) }
+                    if let hex = entry.aircraft?.icao24 { LabeledContent("Transponder (hex)", value: hex.uppercased()) }
                 }
                 Section {
                     Button {
