@@ -10,6 +10,7 @@ struct ShiftStats: Equatable {
     var activeKcal: Double?
     var heartRateLatest: Double?
     var heartRateAverage: Double?
+    var heartRateMax: Double?
     var soundAverageDb: Double?
     var soundMaxDb: Double?
     var waterMl: Double?
@@ -18,8 +19,14 @@ struct ShiftStats: Equatable {
 @Observable
 final class HealthService {
     private(set) var stats = ShiftStats()
+    /// Sleep in the 48 h before the shift (or now, off shift); nil before Health is connected.
+    private(set) var sleep: [SleepSpan]?
+    /// Heart rate over the last few minutes, for the heat-strain check.
+    private(set) var recentHeartRate: [HeatStrain.Sample] = []
     private(set) var lastError: String?
     private(set) var hasRequestedAccess: Bool
+    /// Health has types it hasn't asked about yet, such as sleep after an update added it.
+    private(set) var canAskForMore = false
 
     private let store: HKHealthStore? = HKHealthStore.isHealthDataAvailable() ? HKHealthStore() : nil
 
@@ -32,9 +39,14 @@ final class HealthService {
         HKQuantityType(.activeEnergyBurned),
         HKQuantityType(.heartRate),
         HKQuantityType(.environmentalAudioExposure),
+        HKCategoryType(.sleepAnalysis),
         water,
     ]
     private static let requestedKey = "healthAccessRequested"
+    /// Longest sleep looked back for, so one that started before the window counts.
+    private static let sleepLookback: TimeInterval = 16 * 3600
+    /// Heart rate kept for the heat-strain check: its 5 minutes plus a margin.
+    private static let heartWindow: TimeInterval = 10 * 60
 
     init() {
         hasRequestedAccess = UserDefaults.standard.bool(forKey: Self.requestedKey)
@@ -51,10 +63,28 @@ final class HealthService {
         } catch {
             lastError = error.localizedDescription
         }
+        await checkForNewTypes()
     }
 
-    func refresh(since start: Date) async {
+    /// Whether the permission sheet has types to show; Health never says which reads were refused.
+    func checkForNewTypes() async {
         guard let store, hasRequestedAccess else { return }
+        let status = try? await store.statusForAuthorizationRequest(toShare: [Self.water], read: Self.readTypes)
+        canAskForMore = status == .shouldRequest
+    }
+
+    /// The shift's totals and recent heart rate while on shift (`start` set), and sleep
+    /// before the shift, or before now as a check before starting one.
+    func refresh(since start: Date?) async {
+        guard let store, hasRequestedAccess else { return }
+        let now = Date.now
+        sleep = await readSleep(store, from: (start ?? now) - 2 * 86_400, to: now)
+        guard let start else {
+            stats = ShiftStats()
+            recentHeartRate = []
+            return
+        }
+        recentHeartRate = await readHeartRate(store, from: now - Self.heartWindow)
         let window = HKQuery.predicateForSamples(withStart: start, end: nil)
         func query(_ id: HKQuantityTypeIdentifier, _ options: HKStatisticsOptions) async -> HKStatistics? {
             let descriptor = HKStatisticsQueryDescriptor(
@@ -67,7 +97,7 @@ final class HealthService {
         let steps = await query(.stepCount, .cumulativeSum)
         let distance = await query(.distanceWalkingRunning, .cumulativeSum)
         let energy = await query(.activeEnergyBurned, .cumulativeSum)
-        let heart = await query(.heartRate, [.discreteAverage, .mostRecent])
+        let heart = await query(.heartRate, [.discreteAverage, .discreteMax, .mostRecent])
         let sound = await query(.environmentalAudioExposure, [.discreteAverage, .discreteMax])
         let water = await query(.dietaryWater, .cumulativeSum)
 
@@ -77,9 +107,35 @@ final class HealthService {
             activeKcal: energy?.sumQuantity()?.doubleValue(for: .kilocalorie()),
             heartRateLatest: heart?.mostRecentQuantity()?.doubleValue(for: bpm),
             heartRateAverage: heart?.averageQuantity()?.doubleValue(for: bpm),
+            heartRateMax: heart?.maximumQuantity()?.doubleValue(for: bpm),
             soundAverageDb: sound?.averageQuantity()?.doubleValue(for: dB),
             soundMaxDb: sound?.maximumQuantity()?.doubleValue(for: dB),
             waterMl: water?.sumQuantity()?.doubleValue(for: .literUnit(with: .milli)))
+    }
+
+    /// Time asleep overlapping [from, to]: the asleep stages only, not time in bed or awake.
+    /// Nil when Health couldn't be read, so "no data" and "no sleep" differ.
+    private func readSleep(_ store: HKHealthStore, from: Date, to: Date) async -> [SleepSpan]? {
+        // A sleep that began before `from` still counts for the part after it.
+        let window = HKQuery.predicateForSamples(withStart: from - Self.sleepLookback, end: to)
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.categorySample(type: HKCategoryType(.sleepAnalysis), predicate: window)],
+            sortDescriptors: [SortDescriptor(\.startDate)])
+        guard let samples = try? await descriptor.result(for: store) else { return nil }
+        let asleep = HKCategoryValueSleepAnalysis.allAsleepValues
+        return samples
+            .filter { HKCategoryValueSleepAnalysis(rawValue: $0.value).map(asleep.contains) == true }
+            .map { SleepSpan(start: $0.startDate, end: $0.endDate) }
+            .filter { $0.end > from }
+    }
+
+    private func readHeartRate(_ store: HKHealthStore, from: Date) async -> [HeatStrain.Sample] {
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.quantitySample(type: HKQuantityType(.heartRate), predicate: HKQuery.predicateForSamples(withStart: from, end: nil))],
+            sortDescriptors: [SortDescriptor(\.startDate)])
+        let bpm = HKUnit.count().unitDivided(by: .minute())
+        let samples = (try? await descriptor.result(for: store)) ?? []
+        return samples.map { HeatStrain.Sample(at: $0.startDate, bpm: $0.quantity.doubleValue(for: bpm)) }
     }
 
     /// Saves a drink to Health. Returns false when Health is unavailable or refused it.
@@ -99,19 +155,4 @@ final class HealthService {
             return false
         }
     }
-}
-
-/// Plain guidance from the weather and Health data. Not medical advice.
-enum ShiftAdvice {
-    /// Water to drink per hour on the ramp: about 250 ml every 20 minutes in heat stress
-    /// (common occupational guidance), less otherwise.
-    static func waterPerHourMl(feelsLikeC: Double?) -> Double {
-        guard let feelsLikeC else { return 300 }
-        if feelsLikeC >= 32 { return 750 }
-        if feelsLikeC >= 27 { return 500 }
-        return 300
-    }
-
-    /// Sustained exposure at or above 85 dB(A) calls for hearing protection.
-    static let hearingProtectionDb = 85.0
 }

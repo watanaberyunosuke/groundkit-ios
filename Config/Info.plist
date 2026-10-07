@@ -9,9 +9,11 @@
 		<true/>
 	</dict>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Ramp Ops reads your steps, distance, active energy, heart rate, water and the sound levels your Apple Watch measures, to show how your shift is going and when to drink or wear hearing protection.</string>
+	<string>Ramp Ops reads your steps, distance, active energy, heart rate, sleep, water and the sound levels your Apple Watch measures, to show how your shift is going, check fatigue and heat strain, and say when to drink or wear hearing protection.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Ramp Ops saves the water you log during a shift to Health.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Ramp Ops shows where you are on the airport map and routes you to a gate, stand or building by road. Your position is not stored or sent anywhere.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

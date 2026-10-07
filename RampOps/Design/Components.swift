@@ -238,7 +238,7 @@ struct AirportMenu: View {
 }
 
 extension View {
-    /// Standard toolbar: airport switcher and a refresh spinner.
+    /// Standard toolbar: airport switcher, a refresh spinner and the map.
     func rampToolbar() -> some View {
         modifier(RampToolbar())
     }
@@ -246,6 +246,7 @@ extension View {
 
 private struct RampToolbar: ViewModifier {
     @Environment(AirportStore.self) private var store
+    @State private var showMap = false
 
     func body(content: Content) -> some View {
         content.toolbar {
@@ -253,7 +254,12 @@ private struct RampToolbar: ViewModifier {
             ToolbarItem(placement: .topBarTrailing) {
                 if store.isRefreshing { ProgressView() }
             }
+            // The map from every tab: on the ground it's the airport layout you need.
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Map", systemImage: "map") { showMap = true }
+            }
         }
+        .fullScreenCover(isPresented: $showMap) { MapScreen(mode: .airport) }
     }
 }
 
