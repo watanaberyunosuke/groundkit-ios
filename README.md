@@ -27,7 +27,7 @@ The app reads two endpoints of the aviation project's Vercel API (`api/index.py`
 - `GET /api/tracks/<icao>`: observed arrival and departure paths of the last 3 days, for the map. Also added for this app.
 - `GET /api/live/<icao>`: aircraft within 500 NM from OpenSky or adsb.lol, edge-cached for 2 minutes. Each aircraft's `dir` (inbound, outbound, ground or other) is the server's answer for that fix; the app keeps an airborne aircraft's earlier direction until it lands (`DirectionMemory`), so an arrival on downwind or in a hold stays inbound.
 
-There is no live timetable. As in the Dive, the boards come from each callsign's usual time at the airport over the last 30 days, and the delay is the estimated arrival (or take-off) against that usual time: green under 15 minutes late, amber 15 to 44, red 45 or more. `RampOps/Logic/BoardBuilder.swift` is a line-for-line port of the Dive's logic, so the app and the dashboard agree.
+There is no live timetable. As in the Dive, the boards come from each callsign's usual time at the airport over the last 30 days, and the delay is the estimated arrival (or take-off) against that usual time: green under 15 minutes late, amber 15 to 44, red 45 or more. `RampOps/Logic/BoardBuilder.swift` is a line-for-line port of the Dive's logic, so the app and the dashboard agree. Flights the backend tags as freighters (`is_freighter` in the snapshot history and on `/api/live`, from its list of all-cargo operators) carry a *Freighter* tag; nothing is filtered out, since passenger flights carry belly cargo too.
 
 The app refreshes every 2 minutes while open (the live feed's cache time), fetches the snapshot at most every 5 minutes, and keeps the last snapshot on disk so it opens with data in a dead spot.
 

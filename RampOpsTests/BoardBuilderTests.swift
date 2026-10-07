@@ -8,10 +8,10 @@ private let now = try! Date("2026-10-06T02:00:00Z", strategy: .iso8601)
 private let syd = (lat: -33.946, lon: 151.177)
 
 private func history(_ callsign: String, _ dir: Direction, usual: String, days: Int = 10,
-                     other: String? = "MEL", iata: String? = nil) -> CallsignHistory {
+                     other: String? = "MEL", iata: String? = nil, freighter: Bool? = nil) -> CallsignHistory {
     let parts = usual.split(separator: ":").compactMap { Double($0) }
     return CallsignHistory(callsign: callsign, dir: dir, other: other, n: days, usualMin: parts[0] * 60 + parts[1],
-                           days14: days, flightNumberIata: iata, airlineName: nil)
+                           days14: days, flightNumberIata: iata, airlineName: nil, isFreighter: freighter)
 }
 
 private func builder(_ rows: [CallsignHistory]) -> BoardBuilder {
@@ -122,6 +122,23 @@ struct BoardBuilderTests {
         let board = b.board(.outbound, live: [row], memory: FeedMemory(), now: now)
         #expect(board.live.first?.status == "Late 20 min")
         #expect(board.live.first?.time.map { LocalTime.hhmm($0, sydney) } == "12:40")
+    }
+
+    @Test func freightersAreTaggedFromTheAPI() throws {
+        let b = builder([
+            history("FDX5150", .inbound, usual: "15:00", freighter: true),
+            history("QFA1", .inbound, usual: "15:30", freighter: false),
+            history("GTI8", .inbound, usual: "13:10"),
+        ])
+        let next = b.board(.inbound, live: [], memory: FeedMemory(), now: now).next
+        #expect(next.map(\.callsign) == ["GTI8", "FDX5150", "QFA1"])
+        #expect(next.map(\.freighter) == [false, true, false])
+        // Live: the feed's tag wins, else the callsign's history.
+        var tagged = aircraft("GTI8", kmNorth: 100, track: 180)
+        tagged.isFreighter = true
+        let placed = b.place([tagged, aircraft("QFA1", kmNorth: 100, track: 180)], now: now)
+        let live = b.board(.inbound, live: b.boardLive(placed, now: now), memory: FeedMemory(), now: now).live
+        #expect(Dictionary(uniqueKeysWithValues: live.map { ($0.callsign, $0.freighter) }) == ["GTI8": true, "QFA1": false])
     }
 
     @Test func regularFlightsArePredicted() {

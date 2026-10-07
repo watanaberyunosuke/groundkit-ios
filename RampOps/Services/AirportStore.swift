@@ -136,7 +136,8 @@ final class AirportStore {
             callsign: p.aircraft.callsign ?? p.aircraft.icao24?.uppercased() ?? "Unknown",
             flightIata: p.flightIata, airline: p.airline, other: p.other, usual: p.usual, time: nil,
             timeIsApprox: false, status: p.aircraft.onGround ? "On the ground" : "Not a regular flight here",
-            rag: .unknown, onGround: p.aircraft.onGround, distNm: p.distNm, etaMin: nil, aircraft: p.aircraft)
+            rag: .unknown, onGround: p.aircraft.onGround, distNm: p.distNm, etaMin: nil, aircraft: p.aircraft,
+            freighter: p.aircraft.isFreighter == true)
     }
 
     private func capture<T: Sendable>(_ work: () async throws -> T) async -> Result<T, Error> {
