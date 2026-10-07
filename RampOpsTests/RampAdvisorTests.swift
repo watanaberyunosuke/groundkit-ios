@@ -125,7 +125,7 @@ struct DecodingTests {
          "weather": [], "notams": [],
          "medians": {"arrival_terminal_minutes": null, "departure_terminal_minutes": 9.5},
          "history": [{"callsign": "QFA044", "dir": "inbound", "other": null, "n": 1, "usual_min": 361.0, "days_14": 1,
-                      "flight_number_iata": "QF44", "airline_name": "Qantas"}]}
+                      "flight_number_iata": "QF44", "airline_name": "Qantas", "is_freighter": false}]}
         """
         let s = try JSON.decoder().decode(Snapshot.self, from: Data(json.utf8))
         #expect(s.conditions?.windDirDeg == 290)
@@ -135,13 +135,14 @@ struct DecodingTests {
         #expect(s.history.first?.days14 == 1)
         #expect(s.history.first?.dir == .inbound)
         #expect(s.history.first?.flightNumberIata == "QF44")
+        #expect(s.history.first?.isFreighter == false)
     }
 
     @Test func decodesLiveFeed() throws {
         let json = """
         {"time": 1791254029, "source": "adsb.lol", "failed": ["OpenSky: HTTP 429"], "aircraft": [
           {"icao24": "7c0461", "callsign": "JST773", "lon": 141.5, "lat": -35.8, "alt_ft": 35000, "on_ground": false,
-           "speed_kt": 450, "track_deg": 118.21, "vrate_fpm": 0},
+           "speed_kt": 450, "track_deg": 118.21, "vrate_fpm": 0, "is_freighter": true},
           {"icao24": "7c6dda", "callsign": null, "lon": 151.1, "lat": -33.9, "alt_ft": 0, "on_ground": true,
            "speed_kt": null, "track_deg": null, "vrate_fpm": null}]}
         """
@@ -149,6 +150,8 @@ struct DecodingTests {
         #expect(feed.aircraft.count == 2)
         #expect(feed.aircraft[0].altFt == 35000)
         #expect(feed.aircraft[1].onGround)
+        // The API's freighter tag; nil where it sent none.
+        #expect(feed.aircraft.map(\.isFreighter) == [true, nil])
         #expect(feed.failed == ["OpenSky: HTTP 429"])
     }
 }

@@ -118,6 +118,20 @@ struct StatusPill: View {
     }
 }
 
+/// Tags a flight the API marks as a freighter (is_freighter). Passenger flights carry belly
+/// cargo too, so boards tag freighters rather than filter to them.
+struct FreighterTag: View {
+    var body: some View {
+        Text("Freighter")
+            .font(.caption.weight(.bold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .foregroundStyle(.secondary)
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(.secondary))
+            .accessibilityLabel("Freighter")
+    }
+}
+
 /// Flight number large, with the ICAO callsign under it when they differ.
 struct FlightCode: View {
     var iata: String?

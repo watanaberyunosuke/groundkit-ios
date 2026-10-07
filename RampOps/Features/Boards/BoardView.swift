@@ -100,6 +100,7 @@ struct BoardRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
                     FlightCode(iata: entry.flightIata, callsign: entry.callsign)
+                    if entry.freighter { FreighterTag() }
                     Spacer()
                     Text(entry.other ?? "–").font(.title3.weight(.semibold))
                 }
@@ -139,6 +140,7 @@ struct FlightDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(entry.label).font(.system(size: 44, weight: .heavy, design: .rounded))
                         if let airline = entry.airline { Text(airline).font(.title3) }
+                        if entry.freighter { FreighterTag() }
                         if let other = entry.other {
                             Text("\(entry.dir == .inbound ? "From" : "To") \(other)")
                                 .font(.title2.weight(.semibold))

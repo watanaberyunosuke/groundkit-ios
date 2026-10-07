@@ -130,6 +130,8 @@ nonisolated struct CallsignHistory: Codable, Sendable, Hashable {
     var days14: Int
     var flightNumberIata: String?
     var airlineName: String?
+    /// The API's is_freighter: flown by an all-cargo operator. Nil from older snapshots.
+    var isFreighter: Bool? = nil
 }
 
 nonisolated enum Direction: String, Codable, Sendable, Hashable {
@@ -158,6 +160,8 @@ nonisolated struct LiveAircraft: Codable, Sendable, Hashable {
     var vrateFpm: Double?
     /// The API's direction for this fix: inbound, outbound, ground or other; nil if it had none.
     var dir: String? = nil
+    /// The API's is_freighter tag; nil if it sent none.
+    var isFreighter: Bool? = nil
 }
 
 /// `/api/tracks/<icao>`: observed arrival and departure paths over the last 3 days.

@@ -41,6 +41,11 @@ nonisolated struct HistoryIndex: Sendable {
     func airline(_ callsign: String) -> String? {
         byCallsign[callsign]?.values.lazy.compactMap(\.airlineName).first
     }
+
+    /// Tagged by the API as flown by an all-cargo operator.
+    func isFreighter(_ callsign: String) -> Bool {
+        byCallsign[callsign]?.values.contains { $0.isFreighter == true } ?? false
+    }
 }
 
 /// A live aircraft placed relative to the airport.
@@ -95,6 +100,8 @@ nonisolated struct BoardLive: Sendable, Hashable {
     var rag: Rag
     var statusNote: String?
     var aircraft: LiveAircraft
+    /// Tagged by the API (is_freighter). Passenger flights may carry belly cargo too.
+    var freighter: Bool
 }
 
 /// Direction of each airborne aircraft at the last fix, by transponder address. An arrival
@@ -162,6 +169,8 @@ nonisolated struct BoardEntry: Sendable, Identifiable, Hashable {
     var distNm: Double?
     var etaMin: Double?
     var aircraft: LiveAircraft?
+    /// Tagged by the API (is_freighter). Passenger flights may carry belly cargo too.
+    var freighter: Bool = false
 
     var id: String { "\(phase)|\(dir)|\(callsign)" }
     var label: String { flightIata ?? callsign }
@@ -287,7 +296,8 @@ nonisolated struct BoardBuilder: Sendable {
                           other: other, usual: usual.map { LocalTime.hhmm(minutes: $0) },
                           usualAt: usual.map { now.addingTimeInterval(LocalTime.wrap($0 - nowMin) * 60) },
                           onGround: p.aircraft.onGround, distNm: p.distNm, eventAt: p.eventAt,
-                          etaMin: p.etaMin, rag: rag, statusNote: note, aircraft: p.aircraft)
+                          etaMin: p.etaMin, rag: rag, statusNote: note, aircraft: p.aircraft,
+                          freighter: p.aircraft.isFreighter ?? history.isFreighter(callsign))
             }
             switch p.kind {
             case .inbound, .outbound:
@@ -338,7 +348,7 @@ nonisolated struct BoardBuilder: Sendable {
                 phase: .live, dir: dir, callsign: r.callsign, flightIata: r.flightIata, airline: r.airline,
                 other: r.other, usual: r.usual, time: time, timeIsApprox: approx,
                 status: status, rag: r.rag, onGround: r.onGround, distNm: r.distNm, etaMin: r.etaMin,
-                aircraft: r.aircraft))
+                aircraft: r.aircraft, freighter: r.freighter))
         }
         board.live.sort { ($0.time ?? .distantFuture, $0.distNm ?? 0) < ($1.time ?? .distantFuture, $1.distNm ?? 0) }
 
@@ -357,7 +367,8 @@ nonisolated struct BoardBuilder: Sendable {
                 phase: .past, dir: dir, callsign: r.callsign, flightIata: r.flightIata, airline: r.airline,
                 other: r.other, usual: r.usual, time: when, timeIsApprox: true,
                 status: arriving ? "Landed" : "Departed, \(r.distNm > 400 ? "out of 500 NM" : "off the feed")",
-                rag: .unknown, onGround: r.onGround, distNm: nil, etaMin: nil, aircraft: nil))
+                rag: .unknown, onGround: r.onGround, distNm: nil, etaMin: nil, aircraft: nil,
+                freighter: r.freighter))
         }
 
         // Not seen: regular flights by their usual time.
@@ -373,7 +384,8 @@ nonisolated struct BoardBuilder: Sendable {
                 timeIsApprox: false,
                 status: delta < 0 ? "Presumed \(arriving ? "landed" : "departed"), not seen live"
                     : arriving ? "Expected, not yet within 500 NM" : "Expected",
-                rag: .unknown, onGround: false, distNm: nil, etaMin: nil, aircraft: nil)
+                rag: .unknown, onGround: false, distNm: nil, etaMin: nil, aircraft: nil,
+                freighter: seen.isFreighter == true)
             if delta < 0 { board.past.append(entry) } else { board.next.append(entry) }
         }
         board.past.sort { ($0.time ?? .distantPast) > ($1.time ?? .distantPast) } // newest first
