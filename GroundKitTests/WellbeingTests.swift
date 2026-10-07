@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import RampOps
+@testable import GroundKit
 
 private func at(_ iso: String, _ zone: String) -> Date {
     let f = DateFormatter()

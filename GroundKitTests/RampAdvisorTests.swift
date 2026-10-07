@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import RampOps
+@testable import GroundKit
 
 private func conditions(wx: String? = nil, metar: String = "METAR YSSY 060200Z 18010KT 9999 FEW030 20/10 Q1015",
                         taf: String? = nil, wind: Int = 10, gust: Int? = nil, temp: Double = 20, dew: Double = 10,

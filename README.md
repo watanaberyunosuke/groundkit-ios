@@ -1,4 +1,4 @@
-# Ramp Ops (iOS)
+# GroundKit (iOS)
 
 An iPhone and iPad app for apron, ramp and cargo staff at the airports covered by [motherduck-aviation-data-analysis](../motherduck-aviation-data-analysis): Sydney, Melbourne, Brisbane, Singapore, Hong Kong, Amsterdam and Anchorage. It uses the same backend as the web dashboard, the Vercel API over the MotherDuck warehouse, with a front end built for working outside: large type, 60 pt buttons for gloved hands, and status shown by symbol and words as well as colour.
 
@@ -29,7 +29,7 @@ The app reads two endpoints of the aviation project's Vercel API (`api/index.py`
 - `GET /api/tracks/<icao>`: observed arrival and departure paths of the last 3 days, for the map. Also added for this app.
 - `GET /api/live/<icao>`: aircraft within 500 NM from OpenSky or adsb.lol, edge-cached for 2 minutes. Each aircraft's `dir` (inbound, outbound, ground or other) is the server's answer for that fix; the app keeps an airborne aircraft's earlier direction until it lands (`DirectionMemory`), so an arrival on downwind or in a hold stays inbound.
 
-There is no live timetable. As in the Dive, the boards come from each callsign's usual time at the airport over the last 30 days, and the delay is the estimated arrival (or take-off) against that usual time: green under 15 minutes late, amber 15 to 44, red 45 or more. `RampOps/Logic/BoardBuilder.swift` is a line-for-line port of the Dive's logic, so the app and the dashboard agree. Flights the backend tags as freighters (`is_freighter` in the snapshot history and on `/api/live`, from its list of all-cargo operators) carry a *Freighter* tag; nothing is filtered out, since passenger flights carry belly cargo too.
+There is no live timetable. As in the Dive, the boards come from each callsign's usual time at the airport over the last 30 days, and the delay is the estimated arrival (or take-off) against that usual time: green under 15 minutes late, amber 15 to 44, red 45 or more. `GroundKit/Logic/BoardBuilder.swift` is a line-for-line port of the Dive's logic, so the app and the dashboard agree. Flights the backend tags as freighters (`is_freighter` in the snapshot history and on `/api/live`, from its list of all-cargo operators) carry a *Freighter* tag; nothing is filtered out, since passenger flights carry belly cargo too.
 
 The app refreshes every 2 minutes while open (the live feed's cache time), fetches the snapshot at most every 5 minutes, and keeps the last snapshot on disk so it opens with data in a dead spot.
 
@@ -50,16 +50,18 @@ The app refreshes every 2 minutes while open (the live feed's cache time), fetch
 
 ## Records and sync (CloudKit)
 
-Turnarounds, shifts (with their breaks and summary) and handover notes are SwiftData models (`RampOps/Models/RampRecords.swift`) stored with `cloudKitDatabase: .automatic`, so they sync through the iCloud private database to every device signed in to the same Apple Account. Without the entitlement or an iCloud account they stay on the device. The models follow CloudKit's rules: defaults on every attribute, no unique constraints, optional relationships with inverses.
+Turnarounds, shifts (with their breaks and summary) and handover notes are SwiftData models (`GroundKit/Models/RampRecords.swift`) stored with `cloudKitDatabase: .automatic`, so they sync through the iCloud private database to every device signed in to the same Apple Account. Without the entitlement or an iCloud account they stay on the device. The models follow CloudKit's rules: defaults on every attribute, no unique constraints, optional relationships with inverses.
 
 The private database is per Apple Account, so it suits one person's devices or a shared crew iPad. Sharing between colleagues' own phones would need `CKShare` or the public database (see Next steps).
 
 ## Setup
 
-1. Open `RampOps.xcodeproj` in Xcode 26 or later.
-2. In Signing & Capabilities for the RampOps target, choose your team. Change the bundle identifier (`io.github.watanaberyunosuke.RampOps`) if it is taken, and the iCloud container (`iCloud.io.github.watanaberyunosuke.RampOps` in `Config/RampOps.entitlements`) to match.
+1. Open `GroundKit.xcodeproj` in Xcode 26 or later.
+2. In Signing & Capabilities for the GroundKit target, choose your team. Change the bundle identifier (`com.harrydatahub.GroundKit`) if it is taken, and the iCloud container (`iCloud.com.harrydatahub.GroundKit` in `Config/GroundKit.entitlements`) to match.
 3. Check the iCloud (CloudKit) and HealthKit capabilities are on. The new `Shift` fields (`breaks`, `summaryData`) are additive, so existing stores migrate on their own; deploy the CloudKit schema again before a release. Xcode creates the container on first run. Before a release, deploy the CloudKit schema to production in the CloudKit Console.
 4. Run on a device or simulator. Health data is richer on a device paired with an Apple Watch.
+
+The app was called Ramp Ops until October 2026. The bundle identifier and iCloud container changed with the name, so GroundKit installs as a new app and starts with an empty iCloud store; turnarounds, shifts and notes saved by Ramp Ops are not carried over.
 
 To run against a local API instead of production (from the aviation repo, with its local warehouse):
 
@@ -72,7 +74,7 @@ then set the API address in Settings to `http://localhost:8000`, or launch with 
 ## Tests
 
 ```bash
-xcodebuild test -scheme RampOps -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+xcodebuild test -scheme GroundKit -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
 ```
 
 Swift Testing covers the board logic (placement, ETA, delay, on-stand lateness, predicted flights, landings remembered across fixes, coverage gaps), the ramp advisories (thunderstorms, storm clouds, TAF validity, wind limits, heat index, wind chill, ice, low visibility, stale weather, NOTAM relevance), METAR wording, decoding the API's JSON, sunrise and sunset (HKG and LHR, polar night), the fatigue, rest, weekly-hours, heat-strain and break rules, and the OpenStreetMap layout parser, place search and road routes (including one-way roads). The same cases as the Android app's tests.
@@ -80,7 +82,7 @@ Swift Testing covers the board logic (placement, ETA, delay, on-stand lateness, 
 ## Layout
 
 ```
-RampOps/
+GroundKit/
   App/          entry point, tabs, cross-tab navigation
   Models/       API types (Snapshot.swift), SwiftData records (RampRecords.swift)
   Services/     API client and on-disk cache, AirportStore (refresh, boards), HealthService,
@@ -89,7 +91,7 @@ RampOps/
                 AirportLayout and RoadGraph, Wellbeing (fatigue, heat strain), Solar
   Design/       shared components: cards, tiles, status pills, big buttons, clocks
   Features/     Now, Map, Boards, Turnarounds, Shift, Settings
-RampOpsTests/   Swift Testing
+GroundKitTests/   Swift Testing
 Config/         Info.plist additions and entitlements
 ```
 

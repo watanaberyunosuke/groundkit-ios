@@ -133,7 +133,7 @@ struct ShiftView: View {
             }
         } else if !health.hasRequestedAccess {
             Card(title: "Connect Health", systemImage: "heart") {
-                Text("Allow Ramp Ops to read activity, heart rate, sleep and sound levels, and save the water you log.")
+                Text("Allow GroundKit to read activity, heart rate, sleep and sound levels, and save the water you log.")
                     .foregroundStyle(.secondary)
                 Button("Connect Health", systemImage: "heart.fill") {
                     Task {

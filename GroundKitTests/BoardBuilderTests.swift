@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import RampOps
+@testable import GroundKit
 
 /// Sydney at 13:00 local (02:00Z; daylight saving from 4 October 2026).
 private let sydney = TimeZone(identifier: "Australia/Sydney")!
