@@ -10,7 +10,7 @@ nonisolated struct OverpassClient: Sendable {
         "https://overpass.private.coffee/api/interpreter",
         "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     ].compactMap(URL.init(string:))
-    private static let userAgent = "ramp-ops-ios (github.com/watanaberyunosuke/motherduck-aviation-data-ios)"
+    private static let userAgent = "groundkit-ios (github.com/watanaberyunosuke/groundkit-ios)"
     /// About 300 m round the aerodrome, for its access roads.
     private static let marginDeg = 0.003
     static let maxAge: TimeInterval = 30 * 86_400

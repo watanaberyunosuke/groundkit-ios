@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 @main
-struct RampOpsApp: App {
+struct GroundKitApp: App {
     @State private var store = AirportStore()
     @State private var health = HealthService()
     @State private var router = Router()

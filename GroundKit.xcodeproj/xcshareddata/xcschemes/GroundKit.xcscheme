@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AA0000000000000000000100"
-               BuildableName = "RampOps.app"
-               BlueprintName = "RampOps"
-               ReferencedContainer = "container:RampOps.xcodeproj">
+               BuildableName = "GroundKit.app"
+               BlueprintName = "GroundKit"
+               ReferencedContainer = "container:GroundKit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -34,9 +34,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AA0000000000000000000200"
-               BuildableName = "RampOpsTests.xctest"
-               BlueprintName = "RampOpsTests"
-               ReferencedContainer = "container:RampOps.xcodeproj">
+               BuildableName = "GroundKitTests.xctest"
+               BlueprintName = "GroundKitTests"
+               ReferencedContainer = "container:GroundKit.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -56,9 +56,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AA0000000000000000000100"
-            BuildableName = "RampOps.app"
-            BlueprintName = "RampOps"
-            ReferencedContainer = "container:RampOps.xcodeproj">
+            BuildableName = "GroundKit.app"
+            BlueprintName = "GroundKit"
+            ReferencedContainer = "container:GroundKit.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -73,9 +73,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AA0000000000000000000100"
-            BuildableName = "RampOps.app"
-            BlueprintName = "RampOps"
-            ReferencedContainer = "container:RampOps.xcodeproj">
+            BuildableName = "GroundKit.app"
+            BlueprintName = "GroundKit"
+            ReferencedContainer = "container:GroundKit.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
