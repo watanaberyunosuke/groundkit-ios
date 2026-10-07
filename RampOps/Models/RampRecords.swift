@@ -92,6 +92,11 @@ final class Shift {
     var startedAt: Date = Date.now
     var endedAt: Date?
     var waterMl: Double = 0
+    /// When breaks were logged with the break button.
+    var breaks: [Date] = []
+    /// A `ShiftSummary` as JSON, kept when the shift ends. Data rather than a composite
+    /// attribute, so the CloudKit schema stays one plain field.
+    var summaryData: Data?
 
     init(airportIcao: String, startedAt: Date = .now) {
         self.airportIcao = airportIcao
@@ -100,6 +105,28 @@ final class Shift {
 
     var isActive: Bool { endedAt == nil }
     var duration: TimeInterval { (endedAt ?? .now).timeIntervalSince(startedAt) }
+    /// The last break, or the start: when the current stretch of work began.
+    var workingSince: Date { breaks.max() ?? startedAt }
+
+    var summary: ShiftSummary? {
+        get { summaryData.flatMap { try? JSONDecoder().decode(ShiftSummary.self, from: $0) } }
+        set { summaryData = newValue.flatMap { try? JSONEncoder().encode($0) } }
+    }
+}
+
+/// How a shift went, kept with it when it ends: Health's totals (nil for types not allowed
+/// or with no data), water against the target, breaks, and sleep before it.
+nonisolated struct ShiftSummary: Codable, Sendable, Hashable {
+    var steps: Double?
+    var distanceKm: Double?
+    var activeKcal: Double?
+    var heartRateAverage: Double?
+    var heartRateMax: Double?
+    var waterMl: Double = 0
+    var waterTargetMl: Double?
+    var breaks = 0
+    var longestWithoutBreak: TimeInterval = 0
+    var sleep24h: TimeInterval?
 }
 
 @Model

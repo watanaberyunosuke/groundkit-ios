@@ -6,6 +6,8 @@ struct RampOpsApp: App {
     @State private var store = AirportStore()
     @State private var health = HealthService()
     @State private var router = Router()
+    @State private var layouts = LayoutStore()
+    @State private var location = LocationTracker()
     private let container = Persistence.makeContainer()
 
     var body: some Scene {
@@ -14,6 +16,8 @@ struct RampOpsApp: App {
                 .environment(store)
                 .environment(health)
                 .environment(router)
+                .environment(layouts)
+                .environment(location)
         }
         .modelContainer(container)
     }
@@ -41,6 +45,9 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("gloveMode") private var gloveMode = false
     @AppStorage("keepAwake") private var keepAwake = false
+    @AppStorage("appearance") private var appearance = Appearance.auto
+    /// Ticks each minute, for the Sunset appearance.
+    @State private var minute = Date.now
 
     var body: some View {
         @Bindable var router = router
@@ -54,10 +61,20 @@ struct RootView: View {
         }
         // Glove mode: larger text and controls everywhere, on top of the user's setting.
         .dynamicTypeSize(gloveMode ? .xxLarge ... .accessibility3 : .xSmall ... .accessibility5)
+        .preferredColorScheme(appearance.colorScheme(for: store.airport, at: minute))
         .task { await store.autoRefresh() }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                minute = .now
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             UIApplication.shared.isIdleTimerDisabled = keepAwake && phase == .active
-            if phase == .active { Task { await store.refresh() } }
+            if phase == .active {
+                minute = .now
+                Task { await store.refresh() }
+            }
         }
         .onChange(of: keepAwake) { _, on in UIApplication.shared.isIdleTimerDisabled = on }
         .sensoryFeedback(.warning, trigger: store.rampStatus?.severity) { old, new in

@@ -6,7 +6,7 @@ import SwiftUI
 // 50 NM terminal area and the wind.
 
 enum MapZoom: String, CaseIterable, Identifiable {
-    case airport = "Airport"
+    case airport = "Close-in"
     case terminal = "50 NM"
     case wide = "500 NM"
 
@@ -34,6 +34,8 @@ struct AirspaceMap: View {
     var showGround = true
     /// Flight numbers on parked aircraft and satellite imagery, for the close-in view.
     var airportView = false
+    /// Your position, once location is allowed.
+    var showsUser = false
     var onSelect: (PlacedAircraft) -> Void = { _ in }
 
     var body: some View {
@@ -61,6 +63,7 @@ struct AirspaceMap: View {
                         .onTapGesture { onSelect(p) }
                 }
             }
+            if showsUser { UserAnnotation() }
         }
         .mapStyle(airportView ? .hybrid(elevation: .flat, pointsOfInterest: .excludingAll)
                   : .standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
@@ -68,6 +71,7 @@ struct AirspaceMap: View {
             if interactive {
                 MapCompass()
                 MapScaleView()
+                MapUserLocationButton()
             }
         }
         .overlay(alignment: .topLeading) {
@@ -188,40 +192,78 @@ struct MapCard: View {
         }
         .onAppear { position = MapZoom.terminal.position(center) }
         .onChange(of: store.icao) { position = MapZoom.terminal.position(center) }
-        .fullScreenCover(isPresented: $showFull) { MapScreen() }
+        .fullScreenCover(isPresented: $showFull) { MapScreen(mode: .airspace) }
     }
 
     private var center: CLLocationCoordinate2D { .init(latitude: store.airport.lat, longitude: store.airport.lon) }
 }
 
+/// The map: the airport's layout for finding your way on the ground, or the airspace with
+/// live traffic. Both show where you are once location is allowed.
+enum MapMode: String, CaseIterable, Identifiable {
+    case airport = "Airport"
+    case airspace = "Airspace"
+
+    var id: String { rawValue }
+}
+
 struct MapScreen: View {
     @Environment(AirportStore.self) private var store
+    @Environment(LocationTracker.self) private var location
     @Environment(\.dismiss) private var dismiss
+    @State private var mode: MapMode
     @State private var zoom = MapZoom.terminal
     @State private var position: MapCameraPosition = .automatic
     @State private var selected: BoardEntry?
 
+    init(mode: MapMode = .airport) {
+        _mode = State(initialValue: mode)
+    }
+
     var body: some View {
         NavigationStack {
-            AirspaceMap(position: $position, interactive: true, airportView: zoom == .airport) { selected = store.entry(for: $0) }
-                .ignoresSafeArea(edges: .bottom)
-                .safeAreaInset(edge: .bottom) { legend }
-                .navigationTitle("\(store.airport.iata) airspace")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
-                    ToolbarItem(placement: .principal) {
-                        Picker("Zoom", selection: $zoom) {
-                            ForEach(MapZoom.allCases) { Text($0.rawValue).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 240)
-                    }
+            Group {
+                switch mode {
+                case .airport: AirportLayoutScreen()
+                case .airspace: airspace
                 }
-                .onAppear { position = zoom.position(center) }
-                .onChange(of: zoom) { withAnimation { position = zoom.position(center) } }
-                .sheet(item: $selected) { FlightDetailView(entry: $0) }
+            }
+            .navigationTitle("\(store.airport.iata) \(mode == .airport ? "layout" : "airspace")")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .principal) {
+                    Picker("Map", selection: $mode) {
+                        ForEach(MapMode.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 220)
+                }
+            }
+            // Location runs only while a map is on screen.
+            .onAppear { location.start() }
+            .onDisappear { location.stop() }
         }
+    }
+
+    private var airspace: some View {
+        AirspaceMap(position: $position, interactive: true, airportView: zoom == .airport, showsUser: location.isAllowed) {
+            selected = store.entry(for: $0)
+        }
+        .ignoresSafeArea(edges: .bottom)
+        .safeAreaInset(edge: .top) {
+            Picker("Zoom", selection: $zoom) {
+                ForEach(MapZoom.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.regularMaterial)
+        }
+        .safeAreaInset(edge: .bottom) { legend }
+        .onAppear { position = zoom.position(center) }
+        .onChange(of: zoom) { withAnimation { position = zoom.position(center) } }
+        .sheet(item: $selected) { FlightDetailView(entry: $0) }
     }
 
     private var center: CLLocationCoordinate2D { .init(latitude: store.airport.lat, longitude: store.airport.lon) }
