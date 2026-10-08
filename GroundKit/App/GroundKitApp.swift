@@ -23,15 +23,23 @@ struct GroundKitApp: App {
     }
 }
 
+/// The four tabs, the same as the Android app's.
 enum AppTab: Hashable {
-    case now, arrivals, departures, turnarounds, shift
+    case now, flights, turnarounds, shift
 }
 
-/// Cross-tab navigation: "Start turnaround" on a board opens it in the Turnarounds tab.
+/// Cross-tab navigation: "Start turnaround" on a board opens it in the Turnarounds tab, and
+/// "See all" on Now opens Flights on arrivals or departures.
 @Observable
 final class Router {
     var tab: AppTab = .now
+    var flightsDir: Direction = .inbound
     var turnaroundPath: [Turnaround] = []
+
+    func showFlights(_ dir: Direction) {
+        flightsDir = dir
+        tab = .flights
+    }
 
     func open(_ turnaround: Turnaround) {
         tab = .turnarounds
@@ -53,9 +61,8 @@ struct RootView: View {
         @Bindable var router = router
         TabView(selection: $router.tab) {
             Tab("Now", systemImage: "gauge.with.needle", value: AppTab.now) { NowView() }
-            Tab("Arrivals", systemImage: "airplane.arrival", value: AppTab.arrivals) { BoardView(dir: .inbound) }
+            Tab("Flights", systemImage: "airplane", value: AppTab.flights) { BoardView() }
                 .badge(store.arrivals.live.filter { !$0.onGround }.count)
-            Tab("Departures", systemImage: "airplane.departure", value: AppTab.departures) { BoardView(dir: .outbound) }
             Tab("Turnarounds", systemImage: "checklist", value: AppTab.turnarounds) { TurnaroundListView() }
             Tab("Shift", systemImage: "heart.text.clipboard", value: AppTab.shift) { ShiftView() }
         }

@@ -16,8 +16,8 @@ struct NowView: View {
                     RampStatusCard(status: store.rampStatus, error: store.snapshotError)
                     MapCard()
                     if let c = store.conditions { WeatherTiles(c: c, status: store.rampStatus) }
-                    NextUpCard(title: "Next arrivals", dir: .inbound, board: store.arrivals) { router.tab = .arrivals }
-                    NextUpCard(title: "Next departures", dir: .outbound, board: store.departures) { router.tab = .departures }
+                    NextUpCard(title: "Next arrivals", dir: .inbound, board: store.arrivals) { router.showFlights(.inbound) }
+                    NextUpCard(title: "Next departures", dir: .outbound, board: store.departures) { router.showFlights(.outbound) }
                     if let weather = store.snapshot?.weather, weather.count > 1 {
                         WindChart(hours: weather, timeZone: store.timeZone,
                                   cautionKt: store.thresholds.windCautionKt, warningKt: store.thresholds.windWarningKt)

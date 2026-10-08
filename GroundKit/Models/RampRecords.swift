@@ -73,6 +73,19 @@ final class Turnaround {
     var onBlocksAt: Date? { completed[.chocksOn] }
 }
 
+/// The target off-block time, picked as a local time at the airport.
+nonisolated enum OffBlock {
+    /// Today at the airport, or tomorrow when that is more than 12 h ago (a turnaround
+    /// picked before midnight that leaves after it). The same rule as the Android app.
+    static func at(hour: Int, minute: Int, in zone: TimeZone, now: Date = .now) -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = zone
+        let today = cal.date(bySettingHour: hour, minute: minute, second: 0, of: now) ?? now
+        guard now.timeIntervalSince(today) > 12 * 3_600 else { return today }
+        return cal.date(byAdding: .day, value: 1, to: today) ?? today
+    }
+}
+
 @Model
 final class TurnaroundEvent {
     /// A `TurnaroundStep` raw value. Stored as text so new steps sync to older app versions.
