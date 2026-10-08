@@ -106,7 +106,7 @@ struct RampStatusCard: View {
                 }
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(status == nil ? Color.white : severity.onColor)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)

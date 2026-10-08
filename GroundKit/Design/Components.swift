@@ -13,6 +13,16 @@ extension Rag {
         }
     }
 
+    /// Text on a `color` fill. System green and orange are too light for white text in
+    /// sunlight (about 2:1), so they take black; red and blue keep white.
+    var onColor: Color {
+        switch self {
+        case .green, .amber: .black
+        case .red: .white
+        case .unknown: .primary
+        }
+    }
+
     var symbol: String {
         switch self {
         case .green: "checkmark.circle.fill"
@@ -30,6 +40,14 @@ extension Severity {
         case .normal: .green
         case .caution: .orange
         case .warning: .red
+        }
+    }
+
+    /// Text on a `color` fill; see `Rag.onColor`.
+    var onColor: Color {
+        switch self {
+        case .normal, .caution: .black
+        case .info, .warning: .white
         }
     }
 
@@ -113,7 +131,7 @@ struct StatusPill: View {
             .minimumScaleFactor(0.75)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .foregroundStyle(rag == .unknown ? Color.primary : .white)
+            .foregroundStyle(rag.onColor)
             .background(rag == .unknown ? Color.secondary.opacity(0.2) : rag.color, in: .capsule)
     }
 }
@@ -158,7 +176,9 @@ struct BigButtonStyle: ButtonStyle {
             .font(.headline)
             .frame(maxWidth: .infinity, minHeight: 60)
             .padding(.horizontal, 12)
-            .foregroundStyle(filled ? Color.white : tint)
+            // OnAccent is white in light mode and navy in dark mode, where the accent and the
+            // system colours are light enough that white text falls below 3:1.
+            .foregroundStyle(filled ? Color("OnAccent") : tint)
             .background(filled ? tint : tint.opacity(0.15), in: .rect(cornerRadius: 14))
             .opacity(configuration.isPressed ? 0.7 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
