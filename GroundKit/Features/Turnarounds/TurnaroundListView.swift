@@ -27,7 +27,7 @@ struct TurnaroundListView: View {
                         Label(showClosed ? "No completed turnarounds" : "No active turnarounds", systemImage: "checklist")
                     } description: {
                         Text(showClosed ? "Closed turnarounds at \(store.airport.iata) appear here."
-                             : "Start one from a flight on the Arrivals board, or add one.")
+                             : "Start one from a flight on the Flights tab, or add one.")
                     } actions: {
                         if !showClosed { Button("New turnaround") { showNew = true }.buttonStyle(.borderedProminent) }
                     }
@@ -78,7 +78,9 @@ struct TurnaroundRow: View {
                         .accessibilityLabel("Dangerous goods")
                 }
                 Spacer()
-                if let off = t.targetOffBlock { OffBlockCountdown(target: off, timeZone: timeZone, compact: true) }
+                if let off = t.targetOffBlock, !t.isClosed, t.completed[.chocksOff] == nil {
+                    OffBlockCountdown(target: off, timeZone: timeZone, compact: true)
+                }
             }
             ProgressView(value: t.progress)
                 .tint(t.progress >= 1 ? .green : .accentColor)
@@ -161,12 +163,16 @@ struct NewTurnaroundView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
                         let code = flight.trimmingCharacters(in: .whitespaces).uppercased()
+                        var cal = Calendar(identifier: .gregorian)
+                        cal.timeZone = store.timeZone
+                        let picked = cal.dateComponents([.hour, .minute], from: target)
+                        let offBlock = OffBlock.at(hour: picked.hour ?? 0, minute: picked.minute ?? 0, in: store.timeZone)
                         let t = Turnaround(airportIcao: store.icao, callsign: code,
                                            flightIata: code.isEmpty ? nil : code,
                                            origin: origin.isEmpty ? nil : origin.uppercased(),
                                            destination: destination.isEmpty ? nil : destination.uppercased(),
                                            stand: stand.uppercased(), registration: registration.uppercased(),
-                                           targetOffBlock: hasTarget ? target : nil)
+                                           targetOffBlock: hasTarget ? offBlock : nil)
                         t.hasDangerousGoods = dangerousGoods
                         onCreate(t)
                         dismiss()

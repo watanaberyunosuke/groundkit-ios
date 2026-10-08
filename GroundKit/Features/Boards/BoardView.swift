@@ -1,21 +1,36 @@
 import SwiftData
 import SwiftUI
 
-/// Arrivals or departures: on the live feed now, expected in the next 6 hours, and the
-/// last 3 hours.
+/// The Flights tab: arrivals or departures, picked at the top. Each shows the live feed now,
+/// expected in the next 6 hours, and the last 3 hours. With `fixedDir`, one board enlarged
+/// from Now, with a Done button.
 struct BoardView: View {
     @Environment(AirportStore.self) private var store
-    var dir: Direction
+    @Environment(Router.self) private var router
+    @Environment(\.dismiss) private var dismiss
+    var fixedDir: Direction? = nil
     @State private var search = ""
     @State private var showPast = false
     @State private var selected: BoardEntry?
 
+    private var dir: Direction { fixedDir ?? router.flightsDir }
     private var board: Board { dir == .inbound ? store.arrivals : store.departures }
     private var arriving: Bool { dir == .inbound }
 
     var body: some View {
+        @Bindable var router = router
         NavigationStack {
             List {
+                if fixedDir == nil {
+                    Picker("Show", selection: $router.flightsDir) {
+                        Text("Arrivals").tag(Direction.inbound)
+                        Text("Departures").tag(Direction.outbound)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
+
                 if board.isEmpty {
                     ContentUnavailableView(
                         store.snapshot == nil ? "Loading flights" : "No flights",
@@ -49,8 +64,13 @@ struct BoardView: View {
             }
             .listStyle(.insetGrouped)
             .searchable(text: $search, prompt: "Flight, callsign or airport")
-            .navigationTitle(arriving ? "Arrivals" : "Departures")
+            .navigationTitle(fixedDir == nil ? "Flights" : arriving ? "Arrivals" : "Departures")
             .rampToolbar()
+            .toolbar {
+                if fixedDir != nil {
+                    ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                }
+            }
             .refreshable { await store.refresh(force: true) }
             .sheet(item: $selected) { FlightDetailView(entry: $0) }
         }

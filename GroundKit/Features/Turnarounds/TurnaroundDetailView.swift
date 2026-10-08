@@ -7,6 +7,10 @@ struct TurnaroundDetailView: View {
     @Bindable var turnaround: Turnaround
     @State private var lastDone: TurnaroundStep?
     @State private var confirmClose = false
+    @State private var confirmDelete = false
+    /// Deleted once this screen has gone, so it never draws a deleted model.
+    @State private var deleteOnDisappear = false
+    @Environment(\.dismiss) private var dismiss
     /// Taps in the first moment after opening are the tail of the tap that opened this
     /// screen (or a double tap with gloves), not a step being done.
     @State private var openedAt = Date.now
@@ -35,6 +39,8 @@ struct TurnaroundDetailView: View {
                     if t.isClosed { t.closedAt = nil } else { confirmClose = true }
                 }
                 .buttonStyle(BigButtonStyle(tint: t.isClosed ? .secondary : .green))
+                Button("Delete turnaround", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                    .frame(maxWidth: .infinity, minHeight: 48)
             }
             .padding()
         }
@@ -42,10 +48,19 @@ struct TurnaroundDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sensoryFeedback(.success, trigger: lastDone)
         .onAppear { openedAt = .now }
+        .onDisappear { if deleteOnDisappear { context.delete(turnaround) } }
         .confirmationDialog("Close this turnaround?", isPresented: $confirmClose, titleVisibility: .visible) {
             Button("Close turnaround") { t.closedAt = .now }
         } message: {
             if let next = t.nextStep { Text("\(next.title) and later steps are not marked done.") }
+        }
+        .confirmationDialog("Delete this turnaround?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                deleteOnDisappear = true
+                dismiss()
+            }
+        } message: {
+            Text("Its steps, counts and notes are removed.")
         }
     }
 
