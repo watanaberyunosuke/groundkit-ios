@@ -101,10 +101,10 @@ struct AircraftMarker: View {
         let ours = p.kind == .inbound || p.kind == .outbound
         let labelled = showLabel && (ours || p.kind == .ground)
         VStack(spacing: 1) {
-            // The symbol points east, so turn it by the track less 90°.
-            Image(systemName: "airplane")
-                .font(.system(size: ours ? 20 : p.kind == .ground ? 13 : 12, weight: .bold))
-                .rotationEffect(.degrees((p.aircraft.trackDeg ?? 90) - 90))
+            // A heading arrow, as on Android: the symbol points north, so turn it by the track.
+            Image(systemName: "location.north.fill")
+                .font(.system(size: ours ? 15 : 11, weight: .semibold))
+                .rotationEffect(.degrees(p.aircraft.trackDeg ?? 0))
                 .foregroundStyle(color)
                 .shadow(color: .black.opacity(0.5), radius: 1)
             if labelled {
@@ -292,6 +292,6 @@ struct MapScreen: View {
     }
 
     private func legendItem(_ text: String, _ color: Color) -> some View {
-        Label { Text(text) } icon: { Image(systemName: "airplane").foregroundStyle(color) }
+        Label { Text(text) } icon: { Image(systemName: "location.north.fill").foregroundStyle(color) }
     }
 }
