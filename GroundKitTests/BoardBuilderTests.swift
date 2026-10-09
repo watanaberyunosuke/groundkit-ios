@@ -27,6 +27,16 @@ private func aircraft(_ callsign: String, kmNorth: Double, track: Double = 180, 
                  trackDeg: track, vrateFpm: vrate, dir: dir)
 }
 
+struct AirportCodeTests {
+    @Test func showsThreeLetterCodesOnly() {
+        #expect(Airport.iataCode("AKL") == "AKL")
+        #expect(Airport.iataCode("YBMC") == "MCY") // Sunshine Coast, recoded YBSU
+        #expect(Airport.iataCode("YSSY") == "SYD")
+        #expect(Airport.iataCode("YLVK") == nil) // Lilydale, no IATA code
+        #expect(Airport.iataCode(nil) == nil)
+    }
+}
+
 struct LocalTimeTests {
     @Test func wrapsAroundMidnight() {
         #expect(LocalTime.wrap(10 - 1430) == 20)   // 00:10 vs 23:50

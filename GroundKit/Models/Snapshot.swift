@@ -38,6 +38,18 @@ nonisolated struct Airport: Codable, Sendable, Hashable, Identifiable {
         Airport(icao: "WSSS", iata: "SIN", name: "Singapore Changi", timezone: "Asia/Singapore", lat: 1.359, lon: 103.989),
         Airport(icao: "YSSY", iata: "SYD", name: "Sydney Kingsford Smith", timezone: "Australia/Sydney", lat: -33.946, lon: 151.177),
     ]
+
+    /// Old ICAO codes still reported for airports that have since been recoded, which the
+    /// API's code table (keyed by the current ICAO) doesn't recognise.
+    private static let legacyIata = ["YBMC": "MCY", "YSCH": "CFS", "VGZR": "DAC"]
+
+    /// The three-letter IATA code for an origin or destination. The API falls back to the
+    /// ICAO code when it has no IATA one; those are mapped where known, otherwise nil.
+    static func iataCode(_ code: String?) -> String? {
+        guard let code else { return nil }
+        if code.count == 3 { return code }
+        return legacyIata[code] ?? known.first { $0.icao == code }?.iata
+    }
 }
 
 /// fct_airport_conditions: the latest METAR (decoded and raw), TAF and NOTAM count.
@@ -132,6 +144,9 @@ nonisolated struct CallsignHistory: Codable, Sendable, Hashable {
     var airlineName: String?
     /// The API's is_freighter: flown by an all-cargo operator. Nil from older snapshots.
     var isFreighter: Bool? = nil
+
+    /// `other` as a three-letter code; nil when the airport has none.
+    var otherIata: String? { Airport.iataCode(other) }
 }
 
 nonisolated enum Direction: String, Codable, Sendable, Hashable {
