@@ -271,9 +271,9 @@ struct MapScreen: View {
     private var legend: some View {
         VStack(alignment: .leading, spacing: 6) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), alignment: .leading)], alignment: .leading, spacing: 4) {
-                legendItem("On time", .green)
-                legendItem("15–44 min late", .orange)
-                legendItem("45+ min late", .red)
+                legendItem("On time", .statusOK)
+                legendItem("15–44 min late", .statusCaution)
+                legendItem("45+ min late", .statusWarning)
                 legendItem("No usual time", .blue)
                 legendItem("On the ground", .brown)
                 legendItem("Other traffic", .gray)
