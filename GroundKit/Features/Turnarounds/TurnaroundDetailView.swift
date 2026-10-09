@@ -38,7 +38,7 @@ struct TurnaroundDetailView: View {
                 Button(t.isClosed ? "Reopen turnaround" : "Close turnaround", systemImage: t.isClosed ? "arrow.uturn.left" : "flag.checkered") {
                     if t.isClosed { t.closedAt = nil } else { confirmClose = true }
                 }
-                .buttonStyle(BigButtonStyle(tint: t.isClosed ? .secondary : .green))
+                .buttonStyle(BigButtonStyle(tint: t.isClosed ? .secondary : .statusOK))
                 Button("Delete turnaround", systemImage: "trash", role: .destructive) { confirmDelete = true }
                     .frame(maxWidth: .infinity, minHeight: 48)
             }
@@ -139,6 +139,7 @@ struct StepButton: View {
             HStack(spacing: 10) {
                 Image(systemName: done ? "checkmark.circle.fill" : step.symbol)
                     .font(.title2)
+                    .foregroundStyle(done ? Color.statusOK : .primary)
                     .frame(width: 30)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(step.title).font(.headline).multilineTextAlignment(.leading)
@@ -150,8 +151,8 @@ struct StepButton: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
-            .foregroundStyle(done ? Color.white : .primary)
-            .background(done ? Color.green : isNext ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12),
+            .foregroundStyle(.primary)
+            .background(done ? Color.statusOKContainer : isNext ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12),
                         in: .rect(cornerRadius: 14))
             .overlay {
                 if isNext { RoundedRectangle(cornerRadius: 14).strokeBorder(Color.accentColor, lineWidth: 2) }

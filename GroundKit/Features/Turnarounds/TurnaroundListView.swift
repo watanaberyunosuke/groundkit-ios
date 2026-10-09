@@ -74,7 +74,7 @@ struct TurnaroundRow: View {
                         .foregroundStyle(.black)
                 }
                 if t.hasDangerousGoods {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.statusCaution)
                         .accessibilityLabel("Dangerous goods")
                 }
                 Spacer()
@@ -83,7 +83,7 @@ struct TurnaroundRow: View {
                 }
             }
             ProgressView(value: t.progress)
-                .tint(t.progress >= 1 ? .green : .accentColor)
+                .tint(t.progress >= 1 ? .statusOK : .accentColor)
             Text(t.isClosed ? "Closed \(t.closedAt!.hhmm(timeZone))" : t.nextStep.map { "Next: \($0.title)" } ?? "All steps done")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -105,7 +105,7 @@ struct OffBlockCountdown: View {
             VStack(alignment: .trailing, spacing: 0) {
                 Text(late ? "+\(-minutes) min" : "\(minutes) min")
                     .font((compact ? Font.title3 : .system(size: 40, design: .rounded)).weight(.bold).monospacedDigit())
-                    .foregroundStyle(late ? .red : minutes <= 10 ? .orange : .primary)
+                    .foregroundStyle(late ? .statusWarning : minutes <= 10 ? .statusCaution : .primary)
                 Text("off-block \(target.hhmm(timeZone))").font(.caption).foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .ignore)

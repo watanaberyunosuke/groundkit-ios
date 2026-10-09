@@ -2,24 +2,28 @@ import SwiftUI
 
 // Built for the apron: large type, big tap targets for gloved hands, and status shown by
 // symbol and words as well as colour (sunlight glare, colour blindness).
+//
+// Status colours are muted asset colours (DESIGN.md): a soft tone for icons, text and map
+// marks, and a pale container to fill behind them. Each passes 4.5:1 on its container, and
+// has a stronger variant for Increase Contrast.
 
 extension Rag {
     var color: Color {
         switch self {
-        case .green: .green
-        case .amber: .orange
-        case .red: .red
+        case .green: .statusOK
+        case .amber: .statusCaution
+        case .red: .statusWarning
         case .unknown: .secondary
         }
     }
 
-    /// Text on a `color` fill. System green and orange are too light for white text in
-    /// sunlight (about 2:1), so they take black; red and blue keep white.
-    var onColor: Color {
+    /// Fill behind `color`.
+    var container: Color {
         switch self {
-        case .green, .amber: .black
-        case .red: .white
-        case .unknown: .primary
+        case .green: .statusOKContainer
+        case .amber: .statusCautionContainer
+        case .red: .statusWarningContainer
+        case .unknown: .secondary.opacity(0.15)
         }
     }
 
@@ -36,25 +40,27 @@ extension Rag {
 extension Severity {
     var color: Color {
         switch self {
-        case .info: .blue
-        case .normal: .green
-        case .caution: .orange
-        case .warning: .red
+        case .info: .statusInfo
+        case .normal: .statusOK
+        case .caution: .statusCaution
+        case .warning: .statusWarning
         }
     }
 
-    /// Text on a `color` fill; see `Rag.onColor`.
-    var onColor: Color {
+    /// Fill behind `color`.
+    var container: Color {
         switch self {
-        case .normal, .caution: .black
-        case .info, .warning: .white
+        case .info: .statusInfoContainer
+        case .normal: .statusOKContainer
+        case .caution: .statusCautionContainer
+        case .warning: .statusWarningContainer
         }
     }
 
     var symbol: String {
         switch self {
         case .info: "info.circle.fill"
-        case .normal: "checkmark.seal.fill"
+        case .normal: "checkmark.circle.fill"
         case .caution: "exclamationmark.triangle.fill"
         case .warning: "xmark.octagon.fill"
         }
@@ -131,8 +137,8 @@ struct StatusPill: View {
             .minimumScaleFactor(0.75)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .foregroundStyle(rag.onColor)
-            .background(rag == .unknown ? Color.secondary.opacity(0.2) : rag.color, in: .capsule)
+            .foregroundStyle(rag.color)
+            .background(rag.container, in: .capsule)
     }
 }
 
@@ -221,7 +227,7 @@ struct FreshnessFooter: View {
                 Text("Live positions: \(live.source), \(live.at, format: .relative(presentation: .named))")
             }
             if store.snapshotIsCached {
-                Label("Offline: showing saved data", systemImage: "wifi.slash").foregroundStyle(.orange)
+                Label("Offline: showing saved data", systemImage: "wifi.slash").foregroundStyle(.statusCaution)
             }
             if let error = store.liveError {
                 Label("Live positions unavailable: \(error)", systemImage: "antenna.radiowaves.left.and.right.slash")

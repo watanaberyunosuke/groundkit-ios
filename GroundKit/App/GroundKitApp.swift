@@ -60,7 +60,7 @@ struct RootView: View {
     var body: some View {
         @Bindable var router = router
         TabView(selection: $router.tab) {
-            Tab("Now", systemImage: "gauge.with.needle", value: AppTab.now) { NowView() }
+            Tab("Now", systemImage: "clock", value: AppTab.now) { NowView() }
             Tab("Flights", systemImage: "airplane", value: AppTab.flights) { BoardView() }
                 .badge(store.arrivals.live.filter { !$0.onGround }.count)
             Tab("Turnarounds", systemImage: "checklist", value: AppTab.turnarounds) { TurnaroundListView() }

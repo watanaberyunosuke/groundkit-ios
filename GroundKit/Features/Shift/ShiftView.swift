@@ -60,7 +60,7 @@ struct ShiftView: View {
             waterCard(shift: shift, hours: now.timeIntervalSince(shift.startedAt) / 3600, feelsLike: feelsLike, healthMl: health.stats.waterMl)
             healthCard(shift)
             Button("End shift", systemImage: "stop.fill") { confirmEnd = true }
-                .buttonStyle(BigButtonStyle(tint: .red, filled: false))
+                .buttonStyle(BigButtonStyle(tint: .statusWarning, filled: false))
         } else {
             if let last = shifts.first(where: { !$0.isActive }), let end = last.endedAt, last.summary != nil,
                now.timeIntervalSince(end) < Self.summaryShown {
@@ -78,7 +78,7 @@ struct ShiftView: View {
             Button("Start shift at \(store.airport.iata)", systemImage: "play.fill") {
                 context.insert(Shift(airportIcao: store.icao))
             }
-            .buttonStyle(BigButtonStyle(tint: .green))
+            .buttonStyle(BigButtonStyle(tint: .statusOK))
         }
     }
 
@@ -92,13 +92,13 @@ struct ShiftView: View {
                 .font(.body).foregroundStyle(.secondary)
             if ShiftAdvice.breakDue(workingSince: since, now: now) {
                 Label("Time for a break and a drink?", systemImage: "cup.and.saucer")
-                    .font(.headline).foregroundStyle(.orange)
+                    .font(.headline).foregroundStyle(.statusCaution)
             }
             Button("Log a break now", systemImage: "cup.and.saucer") {
                 shift.breaks.append(.now)
                 breaksLogged += 1
             }
-            .buttonStyle(BigButtonStyle(tint: .orange, filled: false))
+            .buttonStyle(BigButtonStyle(tint: .statusCaution, filled: false))
         }
     }
 
@@ -153,12 +153,12 @@ struct ShiftView: View {
                      detail: heartRates(s.heartRateAverage, s.heartRateMax).map { "Average · peak \($0)" }, systemImage: "heart")
                 Tile(title: "Noise", value: s.soundAverageDb.map { "\(Int($0)) dB" } ?? "Needs Apple Watch",
                      detail: s.soundMaxDb.map { "Peak \(Int($0)) dB" }, systemImage: "ear.badge.waveform",
-                     tint: (s.soundAverageDb ?? 0) >= ShiftAdvice.hearingProtectionDb ? .red : .primary)
+                     tint: (s.soundAverageDb ?? 0) >= ShiftAdvice.hearingProtectionDb ? .statusWarning : .primary)
             }
             if let db = s.soundAverageDb, db >= ShiftAdvice.hearingProtectionDb {
                 Label("Average noise \(Int(db)) dB this shift. Keep hearing protection on near engines and APUs.",
                       systemImage: "ear.trianglebadge.exclamationmark")
-                    .font(.headline).foregroundStyle(.red)
+                    .font(.headline).foregroundStyle(.statusWarning)
             }
             if let error = health.lastError { Text(error).font(.footnote).foregroundStyle(.secondary) }
         }
@@ -234,7 +234,8 @@ struct FindingBanner: View {
     var finding: Finding
 
     var body: some View {
-        let tint: Color = finding.severity == .warning ? .red : .orange
+        let tint: Color = finding.severity == .warning ? .statusWarning : .statusCaution
+        let fill: Color = finding.severity == .warning ? .statusWarningContainer : .statusCautionContainer
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: finding.severity.symbol)
                 .font(.title2)
@@ -247,7 +248,7 @@ struct FindingBanner: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(tint.opacity(0.14), in: .rect(cornerRadius: 14))
+        .background(fill, in: .rect(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(tint, lineWidth: 2))
         .accessibilityElement(children: .combine)
     }
@@ -275,7 +276,7 @@ private struct FatigueCard: View {
             if !f.findings.isEmpty {
                 ForEach(f.findings, id: \.self) { FindingBanner(finding: $0) }
             } else if f.sleep24h != nil {
-                Label("Sleep and rest look fine.", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                Label("Sleep and rest look fine.", systemImage: "checkmark.circle.fill").foregroundStyle(.statusOK)
             }
             if health.hasRequestedAccess && f.sleep24h == nil {
                 Text("No sleep recorded in Health in the last 48 h. An Apple Watch or a sleep app that saves sleep to Health turns on the sleep checks.")
@@ -316,7 +317,7 @@ private struct SummaryCard: View {
                          detail: "Average · peak", systemImage: "heart")
                     Tile(title: "Active energy", value: m.activeKcal.map { "\(Int($0)) kcal" } ?? "–", systemImage: "flame")
                 }
-                ForEach(notes(m), id: \.self) { Text($0).font(.subheadline).foregroundStyle(.orange) }
+                ForEach(notes(m), id: \.self) { Text($0).font(.subheadline).foregroundStyle(.statusCaution) }
             }
         }
     }
@@ -351,7 +352,7 @@ struct HandoverCard: View {
             ForEach(open) { note in
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: note.isImportant ? "exclamationmark.circle.fill" : "circle")
-                        .foregroundStyle(note.isImportant ? .red : .secondary)
+                        .foregroundStyle(note.isImportant ? .statusWarning : .secondary)
                         .font(.title3)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(note.text).font(.body)

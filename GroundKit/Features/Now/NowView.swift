@@ -70,11 +70,11 @@ struct RampStatusCard: View {
             } label: {
                 HStack(spacing: 12) {
                     if status == nil, error != nil {
-                        Image(systemName: "exclamationmark.icloud").font(.title2)
+                        Image(systemName: "exclamationmark.icloud").font(.title2).foregroundStyle(.secondary)
                     } else if status == nil {
-                        ProgressView().tint(.white)
+                        ProgressView()
                     } else {
-                        Image(systemName: severity.symbol).font(.title2)
+                        Image(systemName: severity.symbol).font(.title2).foregroundStyle(severity.color)
                     }
                     VStack(alignment: .leading, spacing: 1) {
                         Text(status?.headline ?? (error == nil ? "Loading weather…" : "Airport data unavailable")).font(.headline)
@@ -100,7 +100,7 @@ struct RampStatusCard: View {
             if isOpen {
                 ForEach(hazards) { a in
                     HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: a.symbol).frame(width: 24)
+                        Image(systemName: a.symbol).frame(width: 24).foregroundStyle(a.severity.color)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(a.title).font(.subheadline.weight(.semibold))
                             Text(a.detail).font(.footnote)
@@ -108,16 +108,16 @@ struct RampStatusCard: View {
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.black.opacity(a.severity >= .caution ? 0.2 : 0.1), in: .rect(cornerRadius: 10))
+                    .background(.background.opacity(0.6), in: .rect(cornerRadius: 10))
                     .accessibilityElement(children: .combine)
                 }
             }
         }
-        .foregroundStyle(status == nil ? Color.white : severity.onColor)
+        .foregroundStyle(.primary)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(status == nil ? Color.gray.gradient : severity.color.gradient, in: .rect(cornerRadius: 16))
+        .background(status == nil ? Color.secondary.opacity(0.15) : severity.container, in: .rect(cornerRadius: 16))
     }
 
     /// "Thunderstorms forecast +1 more", or the all-clear.
@@ -157,7 +157,7 @@ struct WeatherTiles: View {
 
     private var windTint: Color {
         let wind = max(c.windSpeedKt ?? 0, c.windGustKt ?? 0)
-        return wind >= 40 ? .red : wind >= 25 ? .orange : .primary
+        return wind >= 40 ? .statusWarning : wind >= 25 ? .statusCaution : .primary
     }
 
     private func compass(_ deg: Int) -> String {
@@ -223,15 +223,15 @@ struct WindChart: View {
                     }
                     if let gust = h.windGustKt {
                         PointMark(x: .value("Time", h.hourUtc), y: .value("Gust", gust))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.statusCaution)
                             .symbolSize(40)
                     }
                 }
                 RuleMark(y: .value("Caution", cautionKt))
-                    .foregroundStyle(.orange.opacity(0.6))
+                    .foregroundStyle(.statusCaution.opacity(0.6))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
                     .annotation(position: .top, alignment: .leading) {
-                        Text("\(cautionKt) kt").font(.caption2).foregroundStyle(.orange)
+                        Text("\(cautionKt) kt").font(.caption2).foregroundStyle(.statusCaution)
                     }
             }
             .chartXAxis {
@@ -246,7 +246,7 @@ struct WindChart: View {
             .frame(height: 180)
             HStack(spacing: 16) {
                 Label("Wind", systemImage: "line.diagonal").foregroundStyle(.blue)
-                Label("Gusts", systemImage: "circle.fill").foregroundStyle(.orange)
+                Label("Gusts", systemImage: "circle.fill").foregroundStyle(.statusCaution)
             }
             .font(.caption)
         }
@@ -285,7 +285,7 @@ struct NotamsCard: View {
                             Text((n.category ?? "uncategorised").replacingOccurrences(of: "_", with: " ").capitalized)
                                 .font(.caption.weight(.bold))
                                 .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background(.orange.opacity(0.2), in: .capsule)
+                                .background(.statusCautionContainer, in: .capsule)
                             Text(n.number ?? "").font(.caption.monospaced()).foregroundStyle(.secondary)
                             Spacer()
                             Text(validity(n)).font(.caption).foregroundStyle(.secondary)
