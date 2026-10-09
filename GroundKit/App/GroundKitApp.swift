@@ -8,6 +8,7 @@ struct GroundKitApp: App {
     @State private var router = Router()
     @State private var layouts = LayoutStore()
     @State private var location = LocationTracker()
+    @State private var account = AccountService()
     private let container = Persistence.makeContainer()
 
     var body: some Scene {
@@ -18,6 +19,7 @@ struct GroundKitApp: App {
                 .environment(router)
                 .environment(layouts)
                 .environment(location)
+                .environment(account)
         }
         .modelContainer(container)
     }
@@ -49,6 +51,7 @@ final class Router {
 
 struct RootView: View {
     @Environment(AirportStore.self) private var store
+    @Environment(AccountService.self) private var account
     @Environment(Router.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("gloveMode") private var gloveMode = false
@@ -69,6 +72,7 @@ struct RootView: View {
         .dynamicTypeSize(gloveMode ? .xxLarge ... .accessibility3 : .xSmall ... .accessibility5)
         .preferredColorScheme(appearance.colorScheme(for: store.airport, at: minute))
         .task { await store.autoRefresh() }
+        .task { account.attach(store) }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
@@ -80,6 +84,7 @@ struct RootView: View {
             if phase == .active {
                 minute = .now
                 Task { await store.refresh() }
+                Task { await account.sync(ifStale: true) }
             }
         }
         .onChange(of: keepAwake) { _, on in UIApplication.shared.isIdleTimerDisabled = on }

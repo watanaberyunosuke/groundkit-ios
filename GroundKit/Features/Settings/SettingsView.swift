@@ -14,6 +14,7 @@ struct SettingsView: View {
         @Bindable var store = store
         NavigationStack {
             Form {
+                AccountSection()
                 Section("Airport") {
                     Picker("Airport", selection: Binding(get: { store.icao }, set: { store.select($0) })) {
                         ForEach(store.airports.sorted { $0.iata < $1.iata }) { Text("\($0.iata)  \($0.name)").tag($0.icao) }

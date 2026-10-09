@@ -53,12 +53,23 @@ Turnarounds, shifts (with their breaks and summary) and handover notes are Swift
 
 The private database is per Apple Account, so it suits one person's devices or a shared crew iPad. Sharing between colleagues' own phones would need `CKShare` or the public database (see Next steps).
 
+## Account (optional)
+
+Settings > Account signs in with Apple (native), Google or Microsoft (`ASWebAuthenticationSession`, PKCE) or an email and password, through Supabase Auth. Signed in, the airport, glove mode, keep screen on, appearance and wind limits sync with the Android app and the web dashboard. Age and the API address stay on the device. Account > Delete account removes the account and its synced settings. Without a Supabase URL and key the section is hidden.
+
+- `Services/SupabaseClient.swift`: the Auth and REST calls over URLSession (no SDK).
+- `Services/AccountService.swift`: session (Keychain, this device only), token refresh and sync. It watches the app's settings through `UserDefaults` and `AirportStore`.
+- `Logic/SyncedSettings.swift`: the shared settings contract and its per-key merge.
+
+The contract, the Supabase setup and known gaps (including Sign in with Apple token revocation on deletion) are in the aviation repo's [docs/accounts.md](https://github.com/watanaberyunosuke/motherduck-aviation-data-analysis/blob/main/docs/accounts.md).
+
 ## Setup
 
 1. Open `GroundKit.xcodeproj` in Xcode 26 or later.
 2. In Signing & Capabilities for the GroundKit target, choose your team. Change the bundle identifier (`com.harrydatahub.GroundKit`) if it is taken, and the iCloud container (`iCloud.com.harrydatahub.GroundKit` in `Config/GroundKit.entitlements`) to match.
 3. Check the iCloud (CloudKit) and HealthKit capabilities are on. The new `Shift` fields (`breaks`, `summaryData`) are additive, so existing stores migrate on their own; deploy the CloudKit schema again before a release. Xcode creates the container on first run. Before a release, deploy the CloudKit schema to production in the CloudKit Console.
-4. Run on a device or simulator. Health data is richer on a device paired with an Apple Watch.
+4. Accounts (optional): set `GKSupabaseURL` and `GKSupabaseKey` (the project's publishable key) in `Config/Info.plist`, and check the Sign in with Apple capability is on for the App ID.
+5. Run on a device or simulator. Health data is richer on a device paired with an Apple Watch.
 
 The app was called Ramp Ops until October 2026. The bundle identifier and iCloud container changed with the name, so GroundKit installs as a new app and starts with an empty iCloud store; turnarounds, shifts and notes saved by Ramp Ops are not carried over.
 
@@ -76,7 +87,7 @@ then set the API address in Settings to `http://localhost:8000`, or launch with 
 xcodebuild test -scheme GroundKit -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
 ```
 
-Swift Testing covers the board logic (placement, ETA, delay, on-stand lateness, predicted flights, landings remembered across fixes, coverage gaps), the ramp advisories (thunderstorms, storm clouds, TAF validity, wind limits, heat index, wind chill, ice, low visibility, stale weather, NOTAM relevance), METAR wording, decoding the API's JSON, sunrise and sunset (HKG and LHR, polar night), the fatigue, rest, weekly-hours, heat-strain and break rules, and the OpenStreetMap layout parser, place search and road routes (including one-way roads). The same cases as the Android app's tests.
+Swift Testing covers the board logic (placement, ETA, delay, on-stand lateness, predicted flights, landings remembered across fixes, coverage gaps), the ramp advisories (thunderstorms, storm clouds, TAF validity, wind limits, heat index, wind chill, ice, low visibility, stale weather, NOTAM relevance), METAR wording, decoding the API's JSON, sunrise and sunset (HKG and LHR, polar night), the fatigue, rest, weekly-hours, heat-strain and break rules, the OpenStreetMap layout parser, place search and road routes (including one-way roads), and the account sync (settings merge, PKCE, session and error parsing). The same cases as the Android app's tests.
 
 ## Layout
 
