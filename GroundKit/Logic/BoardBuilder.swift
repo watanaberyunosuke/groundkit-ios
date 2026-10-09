@@ -272,7 +272,7 @@ nonisolated struct BoardBuilder: Sendable {
                 LocalTime.wrap(LocalTime.minuteOfDay(at, timeZone) - seen.usualMin)
             } else { nil }
             return PlacedAircraft(
-                aircraft: a, kind: kind, other: seen?.other,
+                aircraft: a, kind: kind, other: seen?.otherIata,
                 flightIata: a.callsign.flatMap(history.flightIata),
                 airline: a.callsign.flatMap(history.airline),
                 distNm: km / Geo.kmPerNm,
@@ -314,7 +314,7 @@ nonisolated struct BoardBuilder: Sendable {
                 guard let dir, let seen = h?[dir] else { continue }
                 // A departure still on the ground after its usual time is running late.
                 let late = dir == .outbound && dep! < 0 ? -dep! : nil
-                rows.append(row(dir, other: seen.other, usual: seen.usualMin,
+                rows.append(row(dir, other: seen.otherIata, usual: seen.usualMin,
                                 rag: dir == .outbound ? Rag(delay: late ?? 0) : .unknown,
                                 note: late.flatMap { $0 >= 15 ? "Late \(Int($0.rounded())) min" : nil }))
             case .other:
@@ -379,7 +379,7 @@ nonisolated struct BoardBuilder: Sendable {
             guard delta >= -Self.pastHours * 60, delta <= Self.nextHours * 60 else { continue }
             let entry = BoardEntry(
                 phase: delta < 0 ? .past : .next, dir: dir, callsign: callsign,
-                flightIata: seen.flightNumberIata, airline: seen.airlineName, other: seen.other,
+                flightIata: seen.flightNumberIata, airline: seen.airlineName, other: seen.otherIata,
                 usual: LocalTime.hhmm(minutes: seen.usualMin), time: now.addingTimeInterval(delta * 60),
                 timeIsApprox: false,
                 status: delta < 0 ? "Presumed \(arriving ? "landed" : "departed"), not seen live"

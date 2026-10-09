@@ -62,7 +62,6 @@ struct RootView: View {
         TabView(selection: $router.tab) {
             Tab("Now", systemImage: "clock", value: AppTab.now) { NowView() }
             Tab("Flights", systemImage: "airplane", value: AppTab.flights) { BoardView() }
-                .badge(store.arrivals.live.filter { !$0.onGround }.count)
             Tab("Turnarounds", systemImage: "checklist", value: AppTab.turnarounds) { TurnaroundListView() }
             Tab("Shift", systemImage: "heart.text.clipboard", value: AppTab.shift) { ShiftView() }
         }
