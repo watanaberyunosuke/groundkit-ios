@@ -1,6 +1,6 @@
 import Foundation
 
-// The JSON the Vercel API serves (motherduck-aviation-data-analysis, api/index.py).
+// The JSON the Vercel API serves (groundkit-dashboard, api/index.py).
 // Keys arrive in snake_case and are decoded with .convertFromSnakeCase, so `days_14`
 // becomes `days14` and `flight_number_iata` becomes `flightNumberIata`.
 

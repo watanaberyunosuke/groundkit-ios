@@ -9,7 +9,7 @@ nonisolated struct APIError: LocalizedError, Sendable {
 
 /// The aviation project's Vercel API: the same backend the web dashboard uses.
 nonisolated struct APIClient: Sendable {
-    static let defaultBaseURL = URL(string: "https://motherduck-aviation-data-analysis.vercel.app")!
+    static let defaultBaseURL = URL(string: "https://groundkit-dashboard.harrydatahub.com")!
 
     var baseURL: URL
     var session: URLSession = .shared
