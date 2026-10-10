@@ -118,7 +118,7 @@ struct SignInView: View {
                     Text("With email")
                 } footer: {
                     if mode == .create {
-                        Text("At least \(Self.minPassword) characters. We send a link to confirm your address. See the privacy policy at groundkit-intro-website.vercel.app/privacy.")
+                        Text("At least \(Self.minPassword) characters. We send a link to confirm your address. See the privacy policy at groundkit.harrydatahub.com/privacy.")
                     } else {
                         Button("Forgot password?") { Task { await reset() } }
                             .font(.footnote)

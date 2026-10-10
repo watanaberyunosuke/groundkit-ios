@@ -1,6 +1,6 @@
 # GroundKit (iOS)
 
-An iPhone and iPad app for apron, ramp and cargo staff at the airports covered by [motherduck-aviation-data-analysis](../motherduck-aviation-data-analysis): Sydney, Melbourne, Brisbane, Singapore, Hong Kong, Amsterdam and Anchorage. It uses the same backend as the web dashboard, the Vercel API over the MotherDuck warehouse, with a front end built for working outside: large type, 60 pt buttons for gloved hands, and status shown by symbol and words as well as colour.
+An iPhone and iPad app for apron, ramp and cargo staff at the airports covered by [groundkit-dashboard](https://github.com/watanaberyunosuke/groundkit-dashboard): Sydney, Melbourne, Brisbane, Singapore, Hong Kong, Amsterdam and Anchorage. It uses the same backend as the web dashboard, the Vercel API over the MotherDuck warehouse, with a front end built for working outside: large type, 60 pt buttons for gloved hands, and status shown by symbol and words as well as colour.
 
 SwiftUI, SwiftData with CloudKit sync, HealthKit and Swift Charts. iOS 18 or later.
 
@@ -61,7 +61,7 @@ Settings > Account signs in with Apple (native), Google or Microsoft (`ASWebAuth
 - `Services/AccountService.swift`: session (Keychain, this device only), token refresh and sync. It watches the app's settings through `UserDefaults` and `AirportStore`.
 - `Logic/SyncedSettings.swift`: the shared settings contract and its per-key merge.
 
-The contract, the Supabase setup and known gaps (including Sign in with Apple token revocation on deletion) are in the aviation repo's [docs/accounts.md](https://github.com/watanaberyunosuke/motherduck-aviation-data-analysis/blob/main/docs/accounts.md).
+The contract, the Supabase setup and known gaps (including Sign in with Apple token revocation on deletion) are in the aviation repo's [docs/accounts.md](https://github.com/watanaberyunosuke/groundkit-dashboard/blob/main/docs/accounts.md).
 
 ## Setup
 
