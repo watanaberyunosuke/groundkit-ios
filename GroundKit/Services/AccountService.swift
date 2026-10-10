@@ -70,14 +70,6 @@ final class AccountService {
         return true
     }
 
-    /// Apple sends the person's name only on their first sign-in, and only to the app.
-    func signInWithApple(idToken: String, rawNonce: String, fullName: String?) async throws {
-        guard let client else { return }
-        let s = try await client.signInWithApple(idToken: idToken, rawNonce: rawNonce)
-        await didSignIn(s)
-        if let fullName, !fullName.isEmpty, displayName == nil { try? await saveDisplayName(fullName) }
-    }
-
     func providerStart(_ provider: AuthProvider) -> (url: URL, pkce: PKCE)? {
         guard let client else { return nil }
         let pkce = PKCE()
@@ -229,13 +221,13 @@ final class AccountService {
     }
 }
 
+/// Provider sign-in offered in the app. Apple and Microsoft are off for now: Sign in with Apple
+/// needs a paid Apple Developer Program membership.
 nonisolated enum AuthProvider: String, CaseIterable, Sendable {
     case google
-    case azure
 
-    var label: String { self == .google ? "Continue with Google" : "Continue with Microsoft" }
-    /// Microsoft (Entra ID) only returns an email address when asked for it.
-    var scopes: String? { self == .azure ? "email" : nil }
+    var label: String { "Continue with Google" }
+    var scopes: String? { nil }
 }
 
 /// Reads and writes the app's own settings (UserDefaults and AirportStore) as synced values.

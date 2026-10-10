@@ -39,12 +39,11 @@ struct AccountSection: View {
     }
 }
 
-/// Sign in with Apple, Google or Microsoft, or with an email and password; create an
-/// account; or ask for a password-reset email.
+/// Sign in with Google or with an email and password; create an account; or ask for a
+/// password-reset email. (Sign in with Apple needs a paid Apple Developer Program membership.)
 struct SignInView: View {
     @Environment(AccountService.self) private var account
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
 
     enum Mode: String, CaseIterable, Identifiable {
@@ -60,7 +59,6 @@ struct SignInView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var notice: String?
-    @State private var appleNonce = ""
 
     private static let minPassword = 8
 
@@ -68,16 +66,6 @@ struct SignInView: View {
         NavigationStack {
             Form {
                 Section {
-                    SignInWithAppleButton(mode == .create ? .signUp : .signIn) { request in
-                        appleNonce = PKCE.random()
-                        request.requestedScopes = [.fullName, .email]
-                        request.nonce = PKCE.sha256Hex(appleNonce)
-                    } onCompletion: { result in
-                        Task { await finishApple(result) }
-                    }
-                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-                    .frame(minHeight: 50)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     ForEach(AuthProvider.allCases, id: \.self) { provider in
                         Button(provider.label) { Task { await signIn(with: provider) } }
                             .frame(maxWidth: .infinity, minHeight: 44)
@@ -152,8 +140,6 @@ struct SignInView: View {
             try await work()
         } catch let e as ASWebAuthenticationSessionError where e.code == .canceledLogin {
             // The person closed the sign-in page.
-        } catch let e as ASAuthorizationError where e.code == .canceled {
-            // The person cancelled Sign in with Apple.
         } catch {
             self.error = error.localizedDescription
         }
@@ -191,18 +177,6 @@ struct SignInView: View {
             let callback = try await webAuthenticationSession.authenticate(
                 using: start.url, callbackURLScheme: SupabaseConfig.callbackScheme, preferredBrowserSession: .ephemeral)
             try await account.providerFinish(callback: callback, pkce: start.pkce)
-        }
-    }
-
-    private func finishApple(_ result: Result<ASAuthorization, Error>) async {
-        await run {
-            let auth = try result.get()
-            guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
-                  let token = credential.identityToken.flatMap({ String(data: $0, encoding: .utf8) }) else {
-                throw SupabaseError(status: 0, code: nil, message: "Apple did not return a sign-in token.")
-            }
-            let name = credential.fullName.map { PersonNameComponentsFormatter.localizedString(from: $0, style: .default) }
-            try await account.signInWithApple(idToken: token, rawNonce: appleNonce, fullName: name)
         }
     }
 }
