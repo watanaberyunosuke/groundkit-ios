@@ -96,12 +96,6 @@ nonisolated struct SupabaseClient: Sendable {
         try Self.decodeSession(await send("auth/v1/token", query: ["grant_type": "password"], json: ["email": email, "password": password]))
     }
 
-    /// Sign in with Apple: Apple's identity token and the raw nonce whose SHA-256 was sent to Apple.
-    func signInWithApple(idToken: String, rawNonce: String) async throws -> AuthSession {
-        try Self.decodeSession(await send("auth/v1/token", query: ["grant_type": "id_token"],
-                                          json: ["provider": "apple", "id_token": idToken, "nonce": rawNonce]))
-    }
-
     /// The page that starts a provider's sign-in; it ends at `callbackURL?code=...`.
     func authorizeURL(provider: String, pkce: PKCE, scopes: String? = nil) -> URL {
         var c = URLComponents(url: config.url.appending(path: "auth/v1/authorize"), resolvingAgainstBaseURL: false)!

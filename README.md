@@ -55,20 +55,20 @@ The private database is per Apple Account, so it suits one person's devices or a
 
 ## Account (optional)
 
-Settings > Account signs in with Apple (native), Google or Microsoft (`ASWebAuthenticationSession`, PKCE) or an email and password, through Supabase Auth. Signed in, the airport, glove mode, keep screen on, appearance and wind limits sync with the Android app and the web dashboard. Age and the API address stay on the device. Account > Delete account removes the account and its synced settings. Without a Supabase URL and key the section is hidden.
+Settings > Account signs in with an email and password or with Google (`ASWebAuthenticationSession`, PKCE), through Supabase Auth. Signed in, the airport, glove mode, keep screen on, appearance and wind limits sync with the Android app and the web dashboard. Age and the API address stay on the device. Account > Delete account removes the account and its synced settings. Without a Supabase URL and key the section is hidden.
 
 - `Services/SupabaseClient.swift`: the Auth and REST calls over URLSession (no SDK).
 - `Services/AccountService.swift`: session (Keychain, this device only), token refresh and sync. It watches the app's settings through `UserDefaults` and `AirportStore`.
 - `Logic/SyncedSettings.swift`: the shared settings contract and its per-key merge.
 
-The contract, the Supabase setup and known gaps (including Sign in with Apple token revocation on deletion) are in the aviation repo's [docs/accounts.md](https://github.com/watanaberyunosuke/groundkit-dashboard/blob/main/docs/accounts.md).
+The contract, the Supabase setup and known gaps are in the aviation repo's [docs/accounts.md](https://github.com/watanaberyunosuke/groundkit-dashboard/blob/main/docs/accounts.md).
 
 ## Setup
 
 1. Open `GroundKit.xcodeproj` in Xcode 26 or later.
 2. In Signing & Capabilities for the GroundKit target, choose your team. Change the bundle identifier (`com.harrydatahub.GroundKit`) if it is taken, and the iCloud container (`iCloud.com.harrydatahub.GroundKit` in `Config/GroundKit.entitlements`) to match.
 3. Check the iCloud (CloudKit) and HealthKit capabilities are on. The new `Shift` fields (`breaks`, `summaryData`) are additive, so existing stores migrate on their own; deploy the CloudKit schema again before a release. Xcode creates the container on first run. Before a release, deploy the CloudKit schema to production in the CloudKit Console.
-4. Accounts (optional): set `GKSupabaseURL` and `GKSupabaseKey` (the project's publishable key) in `Config/Info.plist`, and check the Sign in with Apple capability is on for the App ID.
+4. Accounts (optional): set `GKSupabaseURL` and `GKSupabaseKey` (the project's publishable key) in `Config/Info.plist`. Sign in with Apple and Microsoft are off: Sign in with Apple needs a paid Apple Developer Program membership.
 5. Run on a device or simulator. Health data is richer on a device paired with an Apple Watch.
 
 The app was called Ramp Ops until October 2026. The bundle identifier and iCloud container changed with the name, so GroundKit installs as a new app and starts with an empty iCloud store; turnarounds, shifts and notes saved by Ramp Ops are not carried over.
