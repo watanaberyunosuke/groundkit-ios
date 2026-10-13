@@ -14,6 +14,21 @@ nonisolated enum WeatherText {
         "FC": "funnel cloud", "SS": "sandstorm", "DS": "duststorm",
     ]
 
+    /// The two-letter codes in a METAR weather string, without intensity or "VC":
+    /// "+TSSN VCFG" -> TS, SN, FG. Matching whole codes keeps "TSSN" from reading as "SS".
+    static func codes(_ wx: String?) -> Set<String> {
+        var out: Set<String> = []
+        for group in (wx ?? "").uppercased().split(separator: " ") {
+            var g = group.drop { $0 == "+" || $0 == "-" }
+            if g.hasPrefix("VC") { g = g.dropFirst(2) }
+            while g.count >= 2 {
+                out.insert(String(g.prefix(2)))
+                g = g.dropFirst(2)
+            }
+        }
+        return out
+    }
+
     /// "-SHRA BR" -> "Light rain showers, mist". Nil for no weather.
     static func describe(_ wx: String?) -> String? {
         guard let wx, !wx.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }

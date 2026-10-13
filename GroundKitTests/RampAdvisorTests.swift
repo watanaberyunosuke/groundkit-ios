@@ -4,11 +4,12 @@ import Testing
 
 private func conditions(wx: String? = nil, metar: String = "METAR YSSY 060200Z 18010KT 9999 FEW030 20/10 Q1015",
                         taf: String? = nil, wind: Int = 10, gust: Int? = nil, temp: Double = 20, dew: Double = 10,
-                        vis: Double = 6, visLower: Bool = true, age: Int = 20) -> Conditions {
+                        vis: Double = 6, visLower: Bool = true, age: Int = 20, category: String = "VFR",
+                        ceiling: Int? = nil) -> Conditions {
     Conditions(icao: "YSSY", iata: "SYD", name: "Sydney", lat: -33.946, lon: 151.177, timezone: "Australia/Sydney",
-               metarObservedAt: .now, metarRaw: metar, flightCategory: "VFR", windVariable: false, windDirDeg: 180,
+               metarObservedAt: .now, metarRaw: metar, flightCategory: category, windVariable: false, windDirDeg: 180,
                windSpeedKt: wind, windGustKt: gust, visibilitySm: vis, visibilityIsLowerBound: visLower,
-               ceilingFt: nil, wxString: wx, tempC: temp, dewpointC: dew, altimeterHpa: 1015, tafIssuedAt: nil,
+               ceilingFt: ceiling, wxString: wx, tempC: temp, dewpointC: dew, altimeterHpa: 1015, tafIssuedAt: nil,
                tafValidFrom: nil, tafValidTo: nil, tafRaw: taf, notamsInForce: 0, metarAgeMin: age)
 }
 
@@ -64,9 +65,51 @@ struct RampAdvisorTests {
     }
 
     @Test func iceAndLowVisibility() {
-        #expect(RampAdvisor.evaluate(conditions(wx: "-FZDZ", temp: -1, dew: -2), notams: []).advisories.contains { $0.id == "ice" })
+        let drizzle = RampAdvisor.evaluate(conditions(wx: "-FZDZ", temp: -1, dew: -2), notams: [])
+        #expect(drizzle.advisories.contains { $0.id == "ice" && $0.severity == .warning && $0.title == "Freezing drizzle" })
+        // Freezing rain is not also a rain notice.
+        #expect(!drizzle.advisories.contains { $0.id == "rain" })
+        #expect(RampAdvisor.evaluate(conditions(wx: "FZFG", temp: -2, dew: -2, vis: 0.3, visLower: false), notams: [])
+            .advisories.first { $0.id == "ice" }?.title == "Freezing fog")
+        let snow = RampAdvisor.evaluate(conditions(wx: "-SN", temp: -1, dew: -2), notams: [])
+        #expect(snow.advisories.contains { $0.id == "ice" && $0.severity == .caution })
         let fog = RampAdvisor.evaluate(conditions(wx: "FG", vis: 0.12, visLower: false), notams: [])
         #expect(fog.advisories.contains { $0.id == "vis" && $0.title == "Low visibility, about 200 m" })
+    }
+
+    @Test func hailAndSquallAreWarnings() {
+        let hail = RampAdvisor.evaluate(conditions(wx: "SHGS"), notams: [])
+        #expect(hail.severity == .warning)
+        #expect(hail.advisories.map(\.id) == ["hail"])
+        #expect(RampAdvisor.evaluate(conditions(wx: "SQ"), notams: []).advisories.first?.title == "Squall reported")
+        #expect(RampAdvisor.evaluate(conditions(wx: "+FC"), notams: []).advisories.first?.title == "Funnel cloud reported")
+    }
+
+    @Test func dustIsACaution() {
+        let dust = RampAdvisor.evaluate(conditions(wx: "BLSA"), notams: [])
+        #expect(dust.severity == .caution)
+        #expect(dust.advisories.map(\.id) == ["dust"])
+        // Whole codes only: TSSN is thunder and snow, not a sandstorm (SS); TSGR is hail, not snow grains (SG).
+        #expect(!RampAdvisor.evaluate(conditions(wx: "TSSN", temp: -1, dew: -3), notams: []).advisories.contains { $0.id == "dust" })
+        #expect(!RampAdvisor.evaluate(conditions(wx: "TSGR"), notams: []).advisories.contains { $0.id == "ice" })
+    }
+
+    @Test func rainIsInformation() {
+        let rain = RampAdvisor.evaluate(conditions(wx: "-SHRA"), notams: [])
+        #expect(rain.severity == .normal)
+        #expect(rain.advisories.map(\.id) == ["rain"])
+        #expect(rain.advisories.first?.title == "Rain")
+        #expect(RampAdvisor.evaluate(conditions(wx: "+RA"), notams: []).advisories.first?.title == "Heavy rain")
+    }
+
+    @Test func flightCategoryVisibility() {
+        let lifr = RampAdvisor.evaluate(conditions(vis: 0.25, visLower: false, category: "LIFR", ceiling: 200), notams: [])
+        #expect(lifr.severity == .warning)
+        #expect(lifr.advisories.first { $0.id == "vis" }?.detail.hasPrefix("Visibility 400 m, ceiling 200 ft.") == true)
+        let ifr = RampAdvisor.evaluate(conditions(vis: 2, visLower: false, category: "IFR", ceiling: 800), notams: [])
+        #expect(ifr.severity == .caution)
+        #expect(ifr.advisories.map(\.title) == ["Reduced visibility (IFR)"])
+        #expect(RampAdvisor.evaluate(conditions(category: "MVFR", ceiling: 2500), notams: []).advisories.isEmpty)
     }
 
     @Test func staleWeatherAndNotamsAreInformation() {
@@ -96,6 +139,12 @@ struct WeatherTextTests {
         #expect(WeatherText.describe("BLSN") == "Blowing snow")
         #expect(WeatherText.describe(nil) == nil)
         #expect(WeatherText.describe("") == nil)
+    }
+
+    @Test func weatherCodes() {
+        #expect(WeatherText.codes("+TSSN VCFG") == ["TS", "SN", "FG"])
+        #expect(WeatherText.codes("-SHRA BR") == ["SH", "RA", "BR"])
+        #expect(WeatherText.codes(nil).isEmpty)
     }
 
     @Test func windAndVisibility() {

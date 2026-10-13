@@ -146,13 +146,20 @@ struct WeatherTiles: View {
                  systemImage: "thermometer.medium")
             Tile(title: "Weather",
                  value: WeatherText.describe(c.wxString) ?? "No significant weather",
-                 detail: c.flightCategory.map { "Flight category \($0)" },
+                 detail: weatherDetail,
                  systemImage: "cloud.sun")
             Tile(title: "Visibility",
                  value: WeatherText.visibility(sm: c.visibilitySm, isLowerBound: c.visibilityIsLowerBound),
                  detail: c.ceilingFt.map { "Ceiling \($0.formatted()) ft" },
                  systemImage: "eye")
         }
+    }
+
+    /// Flight category and QNH, one per line.
+    private var weatherDetail: String? {
+        let lines = [c.flightCategory.map { "Flight category \($0)" },
+                     c.altimeterHpa.map { "QNH \(Int($0.rounded())) hPa" }].compactMap(\.self)
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
     private var windTint: Color {
@@ -289,6 +296,12 @@ struct NotamsCard: View {
                             Text(n.number ?? "").font(.caption.monospaced()).foregroundStyle(.secondary)
                             Spacer()
                             Text(validity(n)).font(.caption).foregroundStyle(.secondary)
+                        }
+                        if let schedule = n.schedule?.trimmingCharacters(in: .whitespaces), !schedule.isEmpty {
+                            // Only active in these hours (the NOTAM's D) line), in UTC.
+                            Label("Active only \(schedule)", systemImage: "clock")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.statusCaution)
                         }
                         Text(isOpen ? (n.rawText ?? n.body ?? "") : (n.body ?? n.rawText ?? ""))
                             .font(.callout.monospaced())
