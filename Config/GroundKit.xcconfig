@@ -1,0 +1,15 @@
+// Build settings shared by every target. Values that differ per Mac (your signing team,
+// or another Supabase project) go in Local.xcconfig, which git ignores: copy
+// Local.xcconfig.example to Local.xcconfig and fill it in.
+
+// Apple developer team for signing. Left empty, the app builds for the simulator only.
+DEVELOPMENT_TEAM =
+
+// GroundKit accounts: the GroundKit Supabase project, shared with Android and the
+// dashboard. The URL and publishable key are public; they ship inside the app. Set both
+// empty to hide the Account section and keep settings on the device. "$()" keeps the
+// "//" from reading as a comment.
+GK_SUPABASE_URL = https:/$()/myrklubcznbjdahffdkd.supabase.co
+GK_SUPABASE_KEY = sb_publishable_Sw7a4xhMU6dP4w1SK4FGGA_BGiDQEeT
+
+#include? "Local.xcconfig"

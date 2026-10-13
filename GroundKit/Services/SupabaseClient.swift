@@ -16,10 +16,16 @@ nonisolated struct SupabaseConfig: Sendable, Hashable {
     static let webURL = "https://groundkit-dashboard.harrydatahub.com/"
 
     static func fromBundle(_ bundle: Bundle = .main) -> SupabaseConfig? {
-        guard let raw = bundle.object(forInfoDictionaryKey: "GKSupabaseURL") as? String,
-              let url = URL(string: raw.trimmingCharacters(in: .whitespaces)), url.scheme?.hasPrefix("http") == true,
-              let key = (bundle.object(forInfoDictionaryKey: "GKSupabaseKey") as? String)?.trimmingCharacters(in: .whitespaces),
-              !key.isEmpty
+        from(url: bundle.object(forInfoDictionaryKey: "GKSupabaseURL") as? String,
+             key: bundle.object(forInfoDictionaryKey: "GKSupabaseKey") as? String)
+    }
+
+    /// Nil unless both are set. The host check catches an xcconfig URL written with a bare
+    /// "//", which xcconfig reads as a comment, leaving "https:".
+    static func from(url raw: String?, key rawKey: String?) -> SupabaseConfig? {
+        guard let raw, let url = URL(string: raw.trimmingCharacters(in: .whitespaces)),
+              url.scheme?.hasPrefix("http") == true, url.host() != nil,
+              let key = rawKey?.trimmingCharacters(in: .whitespaces), !key.isEmpty
         else { return nil }
         return SupabaseConfig(url: url, key: key)
     }

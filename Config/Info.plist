@@ -2,12 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyLists-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- GroundKit accounts (optional): the Supabase project URL and publishable key. Both are
-	     public. Left empty, the Account section is hidden and settings stay on the device. -->
+	<!-- GroundKit accounts (optional): set in Config/Local.xcconfig, see Config/GroundKit.xcconfig. -->
 	<key>GKSupabaseURL</key>
-	<string></string>
+	<string>$(GK_SUPABASE_URL)</string>
 	<key>GKSupabaseKey</key>
-	<string></string>
+	<string>$(GK_SUPABASE_KEY)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Lets a development build use the API on localhost (uvicorn api.index:app). -->
