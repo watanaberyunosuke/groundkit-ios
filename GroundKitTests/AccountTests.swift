@@ -70,6 +70,15 @@ struct SupabaseClientTests {
         #expect(PKCE.random().count == 43)
     }
 
+    @Test func configNeedsAURLAndAKey() {
+        #expect(SupabaseConfig.from(url: "https://abc.supabase.co", key: " sb_publishable_x ")?.key == "sb_publishable_x")
+        // Unset build settings arrive as empty strings.
+        #expect(SupabaseConfig.from(url: "", key: "") == nil)
+        #expect(SupabaseConfig.from(url: "https://abc.supabase.co", key: nil) == nil)
+        // "https://..." written in an xcconfig without "$()" loses everything after "//".
+        #expect(SupabaseConfig.from(url: "https:", key: "k") == nil)
+    }
+
     @Test func authorizeURLCarriesTheChallenge() {
         let client = SupabaseClient(config: SupabaseConfig(url: URL(string: "https://abc.supabase.co")!, key: "k"))
         let url = client.authorizeURL(provider: "azure", pkce: PKCE(verifier: "groundkit-test-verifier-0123456789"), scopes: "email")
