@@ -1,0 +1,66 @@
+name: iOS tests
+
+# Builds the app and runs the Swift Testing suite on an iPhone simulator. Mirrors the
+# Android repo's workflow, without its on/off variable: macOS runners cost nothing on a
+# public repository.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # The project needs Xcode 26 or later (Swift 6.2, MainActor by default).
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      # Simulator names change with each Xcode, so take the newest available iPhone.
+      - name: Pick a simulator
+        id: sim
+        run: |
+          udid=$(xcrun simctl list devices available --json | python3 -c '
+          import json, re, sys
+          best = None
+          for runtime, devices in json.load(sys.stdin)["devices"].items():
+              m = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              if not m:
+                  continue
+              version = (int(m[1]), int(m[2]))
+              for d in devices:
+                  if d["name"].startswith("iPhone") and (best is None or version > best[0]):
+                      best = (version, d["udid"], d["name"])
+          print(best[1])
+          print(f"{best[2]}, iOS {best[0][0]}.{best[0][1]}", file=sys.stderr)
+          ')
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+
+      # No Local.xcconfig here, so the app builds without a signing team or accounts.
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project GroundKit.xcodeproj \
+            -scheme GroundKit \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -resultBundlePath TestResults.xcresult \
+            -quiet
+
+      - name: Keep the test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: TestResults.xcresult
