@@ -3,7 +3,8 @@
 // Your team ID, from Xcode > Settings > Accounts, or developer.apple.com > Membership.
 DEVELOPMENT_TEAM = ABCDE12345
 
+// Only to use a Supabase project other than GroundKit's (set in GroundKit.xcconfig).
 // xcconfig files read "//" as the start of a comment, so put "$()" between the two
 // slashes of the URL.
-GK_SUPABASE_URL = https:/$()/your-project-ref.supabase.co
-GK_SUPABASE_KEY = sb_publishable_your_key
+// GK_SUPABASE_URL = https:/$()/your-project-ref.supabase.co
+// GK_SUPABASE_KEY = sb_publishable_your_key
