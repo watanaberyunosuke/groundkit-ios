@@ -14,22 +14,27 @@ struct TurnaroundListView: View {
         let here = all.filter { $0.airportIcao == store.icao && $0.isClosed == showClosed }
         NavigationStack(path: $router.turnaroundPath) {
             List {
-                Picker("Show", selection: $showClosed) {
-                    Text("Active").tag(false)
-                    Text("Completed").tag(true)
+                Section {
+                    Picker("Show", selection: $showClosed) {
+                        Text("Active").tag(false)
+                        Text("Completed").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
                 }
-                .pickerStyle(.segmented)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
 
                 if here.isEmpty {
                     ContentUnavailableView {
                         Label(showClosed ? "No completed turnarounds" : "No active turnarounds", systemImage: "checklist")
                     } description: {
-                        Text(showClosed ? "Closed turnarounds at \(store.airport.iata) appear here."
-                             : "Start one from a flight on the Flights tab, or add one.")
+                        Text(showClosed ? "Turnarounds you close at \(store.airport.iata) are kept here."
+                             : "Tap a flight on the Flights tab and choose Start turnaround, or start one here.")
                     } actions: {
-                        if !showClosed { Button("New turnaround") { showNew = true }.buttonStyle(.borderedProminent) }
+                        if !showClosed {
+                            Button("New turnaround", systemImage: "plus") { showNew = true }
+                                .buttonStyle(BigButtonStyle())
+                        }
                     }
                 }
                 ForEach(here) { t in

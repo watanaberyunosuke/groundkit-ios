@@ -66,14 +66,14 @@ struct ShiftView: View {
                now.timeIntervalSince(end) < Self.summaryShown {
                 SummaryCard(shift: last, timeZone: store.timeZone)
             }
-            FatigueCard(summary: fatigue, onDuty: false)
             startCard
+            FatigueCard(summary: fatigue, onDuty: false)
         }
     }
 
     private var startCard: some View {
-        Card(title: "Not on shift", systemImage: "person.badge.clock") {
-            Text("Start a shift to track time on the ramp and breaks, steps, heart rate, noise and water from Health.")
+        Card(title: "Ready to start?", systemImage: "person.badge.clock") {
+            Text("Starting a shift keeps track of your time on the ramp, breaks and water, with steps, heart rate and noise from Health.")
                 .foregroundStyle(.secondary)
             Button("Start shift at \(store.airport.iata)", systemImage: "play.fill") {
                 context.insert(Shift(airportIcao: store.icao))
@@ -112,7 +112,7 @@ struct ShiftView: View {
                 Text("of about \(Int(target.rounded(.up) / 50) * 50) ml so far").foregroundStyle(.secondary)
             }
             ProgressView(value: min(drunk / target, 1)).tint(.blue)
-            Text(feelsLike.map { "Feels like \(Int($0.rounded())) °C: aim for about \(Int(perHour)) ml an hour." }
+            Text(feelsLike.map { "Feels like \(Int($0.rounded()))°C: aim for about \(Int(perHour)) ml an hour." }
                  ?? "Aim for about \(Int(perHour)) ml an hour.")
                 .font(.subheadline).foregroundStyle(.secondary)
             HStack(spacing: 12) {
@@ -144,17 +144,17 @@ struct ShiftView: View {
                 .buttonStyle(BigButtonStyle(tint: .pink))
             }
         } else {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 12)], spacing: 12) {
-                Tile(title: "Steps", value: s.steps.map { Int($0).formatted() } ?? "–",
-                     detail: s.distanceKm.map { String(format: "%.1f km walked", $0) }, systemImage: "figure.walk")
-                Tile(title: "Active energy", value: s.activeKcal.map { "\(Int($0)) kcal" } ?? "–",
-                     detail: nil, systemImage: "flame")
-                Tile(title: "Heart rate", value: s.heartRateLatest.map { "\(Int($0)) bpm" } ?? "–",
-                     detail: heartRates(s.heartRateAverage, s.heartRateMax).map { "Average · peak \($0)" }, systemImage: "heart")
+            TileGrid(tiles: [
+                Tile(title: "Steps", value: s.steps.map { Int($0).formatted() } ?? "None yet",
+                     detail: s.distanceKm.map { String(format: "%.1f km walked", $0) }, systemImage: "figure.walk"),
+                Tile(title: "Active energy", value: s.activeKcal.map { "\(Int($0)) kcal" } ?? "None yet",
+                     detail: nil, systemImage: "flame"),
+                Tile(title: "Heart rate", value: s.heartRateLatest.map { "\(Int($0)) bpm" } ?? "No reading",
+                     detail: heartRates(s.heartRateAverage, s.heartRateMax).map { "Average · peak \($0)" }, systemImage: "heart"),
                 Tile(title: "Noise", value: s.soundAverageDb.map { "\(Int($0)) dB" } ?? "Needs Apple Watch",
                      detail: s.soundMaxDb.map { "Peak \(Int($0)) dB" }, systemImage: "ear.badge.waveform",
-                     tint: (s.soundAverageDb ?? 0) >= ShiftAdvice.hearingProtectionDb ? .statusWarning : .primary)
-            }
+                     tint: (s.soundAverageDb ?? 0) >= ShiftAdvice.hearingProtectionDb ? .statusWarning : .primary),
+            ])
             if let db = s.soundAverageDb, db >= ShiftAdvice.hearingProtectionDb {
                 Label("Average noise \(Int(db)) dB this shift. Keep hearing protection on near engines and APUs.",
                       systemImage: "ear.trianglebadge.exclamationmark")
@@ -266,13 +266,15 @@ private struct FatigueCard: View {
         Card(title: "Fatigue", systemImage: "bed.double") {
             Text(onDuty ? "Sleep in the 24 and 48 h before this shift" : "Before you start: sleep in the last 24 and 48 h")
                 .font(.subheadline).foregroundStyle(.secondary)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                Tile(title: "Sleep, 24 h", value: f.sleep24h.map(hm) ?? "–", systemImage: "moon.zzz")
-                Tile(title: "Sleep, 48 h", value: f.sleep48h.map(hm) ?? "–", systemImage: "moon.zzz")
-                Tile(title: "Awake for", value: f.awake.map(hm) ?? "–", systemImage: "sun.max")
-                Tile(title: onDuty ? "Rest before shift" : "Rest since shift", value: f.rest.map(hm) ?? "–", systemImage: "bed.double")
-            }
-            Text("\(hm(f.week)) worked in the last 7 days.").font(.subheadline).foregroundStyle(.secondary)
+            TileGrid(tiles: [
+                Tile(title: "Sleep, last 24 h", value: f.sleep24h.map(hm) ?? "Not recorded", systemImage: "moon.zzz"),
+                Tile(title: "Sleep, last 48 h", value: f.sleep48h.map(hm) ?? "Not recorded", systemImage: "moon.zzz"),
+                Tile(title: "Awake for", value: f.awake.map(hm) ?? "Needs sleep data", systemImage: "sun.max"),
+                Tile(title: "Rest", value: f.rest.map(hm) ?? "No earlier shift",
+                     detail: f.rest == nil ? nil : onDuty ? "Before this shift" : "Since your last shift", systemImage: "bed.double"),
+            ])
+            Text(f.week < 60 ? "No shifts logged in the last 7 days." : "\(hm(f.week)) worked in the last 7 days.")
+                .font(.subheadline).foregroundStyle(.secondary)
             if !f.findings.isEmpty {
                 ForEach(f.findings, id: \.self) { FindingBanner(finding: $0) }
             } else if f.sleep24h != nil {
@@ -283,7 +285,7 @@ private struct FatigueCard: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             }
             if health.isAvailable && (!health.hasRequestedAccess || health.canAskForMore) {
-                Button("Allow sleep from Health for the sleep checks") {
+                Button("Use sleep from Health for these checks") {
                     Task {
                         await health.requestAccess()
                         await health.refresh(since: nil)
@@ -305,18 +307,18 @@ private struct SummaryCard: View {
             Card(title: "Shift summary", systemImage: "list.clipboard") {
                 Text("\(shift.startedAt.hhmm(timeZone))–\(end.hhmm(timeZone)) at \(shift.airportIcao)")
                     .font(.subheadline).foregroundStyle(.secondary)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                    Tile(title: "On shift", value: hm(end.timeIntervalSince(shift.startedAt)), systemImage: "clock")
+                TileGrid(tiles: [
+                    Tile(title: "On shift", value: hm(end.timeIntervalSince(shift.startedAt)), systemImage: "clock"),
                     Tile(title: "Breaks", value: "\(m.breaks)", detail: "Longest stretch \(hm(m.longestWithoutBreak))",
-                         systemImage: "cup.and.saucer")
+                         systemImage: "cup.and.saucer"),
                     Tile(title: "Water", value: "\(Int(m.waterMl.rounded())) ml",
-                         detail: m.waterTargetMl.map { "of about \(Int(($0 / 50).rounded(.up)) * 50) ml" }, systemImage: "drop")
+                         detail: m.waterTargetMl.map { "of about \(Int(($0 / 50).rounded(.up)) * 50) ml" }, systemImage: "drop"),
                     Tile(title: "Steps", value: m.steps.map { Int($0).formatted() } ?? "–",
-                         detail: m.distanceKm.map { String(format: "%.1f km", $0) }, systemImage: "figure.walk")
+                         detail: m.distanceKm.map { String(format: "%.1f km", $0) }, systemImage: "figure.walk"),
                     Tile(title: "Heart rate", value: heartRates(m.heartRateAverage, m.heartRateMax) ?? "–",
-                         detail: "Average · peak", systemImage: "heart")
-                    Tile(title: "Active energy", value: m.activeKcal.map { "\(Int($0)) kcal" } ?? "–", systemImage: "flame")
-                }
+                         detail: "Average · peak", systemImage: "heart"),
+                    Tile(title: "Active energy", value: m.activeKcal.map { "\(Int($0)) kcal" } ?? "–", systemImage: "flame"),
+                ])
                 ForEach(notes(m), id: \.self) { Text($0).font(.subheadline).foregroundStyle(.statusCaution) }
             }
         }

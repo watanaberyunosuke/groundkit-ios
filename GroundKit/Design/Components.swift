@@ -109,6 +109,8 @@ struct Tile: View {
             Label(title, systemImage: systemImage)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Text(value)
                 .font(.title2.weight(.bold))
                 .foregroundStyle(tint)
@@ -118,10 +120,49 @@ struct Tile: View {
                 Text(detail).font(.subheadline).foregroundStyle(.secondary)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 88, maxHeight: .infinity, alignment: .topLeading)
         .padding(14)
         .background(.background.secondary, in: .rect(cornerRadius: 14))
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Tiles two to a row (four on a wide iPad screen). Each row is as tall as its tallest tile,
+/// so the tiles line up whatever their text.
+struct TileGrid: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    var tiles: [Tile]
+
+    var body: some View {
+        let perRow = sizeClass == .regular ? 4 : 2
+        Grid(horizontalSpacing: 12, verticalSpacing: 12) {
+            ForEach(Array(stride(from: 0, to: tiles.count, by: perRow)), id: \.self) { start in
+                GridRow {
+                    ForEach(start..<start + perRow, id: \.self) { i in
+                        if i < tiles.count { tiles[i] } else { Color.clear.gridCellUnsizedAxes(.vertical) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// A section heading inside a card: the source and its time, with an optional badge.
+struct SourceLine: View {
+    var text: String
+    var badge: String? = nil
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(text).font(.subheadline).foregroundStyle(.secondary)
+            Spacer(minLength: 8)
+            if let badge {
+                Text(badge)
+                    .font(.subheadline.weight(.bold))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(.secondary.opacity(0.15), in: .capsule)
+            }
+        }
     }
 }
 

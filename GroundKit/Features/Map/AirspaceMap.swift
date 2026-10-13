@@ -186,7 +186,7 @@ struct MapCard: View {
                 .onTapGesture { showFull = true }
                 .accessibilityAddTraits(.isButton)
                 .accessibilityLabel("Airspace map, \(inbound) inbound and \(outbound) outbound. Opens the full map")
-            Text("\(inbound) inbound · \(outbound) outbound within 500 NM")
+            Text(trafficCaption(inbound: inbound, outbound: outbound))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -196,6 +196,13 @@ struct MapCard: View {
     }
 
     private var center: CLLocationCoordinate2D { .init(latitude: store.airport.lat, longitude: store.airport.lon) }
+
+    /// "12 flying in and 5 flying out within 500 NM", or why there is nothing to count.
+    private func trafficCaption(inbound: Int, outbound: Int) -> String {
+        if store.live == nil { return store.liveError == nil ? "Loading live aircraft…" : "Live aircraft unavailable" }
+        if inbound + outbound == 0 { return "No aircraft heading in or out within 500 NM" }
+        return "\(inbound) flying in and \(outbound) flying out within 500 NM"
+    }
 }
 
 /// The map: the airport's layout for finding your way on the ground, or the airspace with

@@ -113,7 +113,8 @@ struct BoardRow: View {
                 Text(entry.time?.hhmm(timeZone, approx: entry.timeIsApprox) ?? "--:--")
                     .font(.title2.weight(.bold).monospacedDigit())
                 if let eta = entry.etaMin {
-                    Text("in \(Int(eta.rounded())) min").font(.subheadline).foregroundStyle(.secondary)
+                    Text(eta < 1 ? "Landing now" : "in \(Int(eta.rounded()).formattedAge)")
+                        .font(.subheadline).foregroundStyle(.secondary)
                 }
             }
             .frame(minWidth: 76, alignment: .leading)
@@ -122,7 +123,7 @@ struct BoardRow: View {
                     FlightCode(iata: entry.flightIata, callsign: entry.callsign)
                     if entry.freighter { FreighterTag() }
                     Spacer()
-                    Text(entry.other ?? "–").font(.title3.weight(.semibold))
+                    if let other = entry.other { Text(other).font(.title3.weight(.semibold)) }
                 }
                 HStack {
                     if entry.phase == .live {
@@ -132,7 +133,7 @@ struct BoardRow: View {
                     }
                     Spacer()
                     if let dist = entry.distNm, !entry.onGround {
-                        Text("\(Int(dist.rounded())) NM").font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                        Text("\(Int(dist.rounded())) NM away").font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -174,7 +175,9 @@ struct FlightDetailView: View {
                     if let time = entry.time {
                         LabeledContent(timeLabel, value: time.hhmm(store.timeZone, approx: entry.timeIsApprox))
                     }
-                    if let eta = entry.etaMin { LabeledContent("Minutes to landing", value: "\(Int(eta.rounded()))") }
+                    if let eta = entry.etaMin {
+                        LabeledContent("Lands in", value: eta < 1 ? "Now" : Int(eta.rounded()).formattedAge)
+                    }
                     if let usual = entry.usual {
                         LabeledContent(entry.dir == .inbound ? "Usual arrival" : "Usual departure", value: usual)
                     }

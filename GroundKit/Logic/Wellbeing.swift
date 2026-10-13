@@ -157,13 +157,13 @@ nonisolated enum HeatStrain {
         let feels = String(format: "%.0f", feelsLikeC)
         if floor > limit {
             return Finding(severity: .warning, title: "Heat strain: heart rate over \(Int(limit)) bpm",
-                           detail: "Your heart rate has stayed over \(Int(limit)) bpm for 5 minutes, and it feels like \(feels) °C. "
+                           detail: "Your heart rate has stayed over \(Int(limit)) bpm for 5 minutes, and it feels like \(feels)°C. "
                                + "Stop, get into shade or air conditioning, drink water, and tell your supervisor. "
                                + "Confusion, headache, nausea or no sweating are an emergency.")
         }
         if floor > limit - Double(cautionMarginBpm) {
             return Finding(severity: .caution, title: "Heart rate high in the heat",
-                           detail: "Over \(Int(limit) - cautionMarginBpm) bpm for 5 minutes, feels like \(feels) °C. Slow down and drink water.")
+                           detail: "Over \(Int(limit) - cautionMarginBpm) bpm for 5 minutes, feels like \(feels)°C. Slow down and drink water.")
         }
         return nil
     }

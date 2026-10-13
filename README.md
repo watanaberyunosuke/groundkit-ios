@@ -22,10 +22,11 @@ The app is advisory only. Ramp closures, lightning alerts and wind limits are th
 
 ## Backend
 
-The app reads two endpoints of the aviation project's Vercel API (`api/index.py`):
+The app reads these endpoints of the aviation project's Vercel API (`api/index.py`):
 
 - `GET /api/snapshot/<icao>`: the airport list, current conditions, 24 hours of hourly weather, NOTAMs in force, median terminal times and the 30-day callsign history, as JSON (about 20 KB gzipped). Added for this app; the web dashboard reads Parquet instead. **Deploy the aviation repo before using the production URL.**
 - `GET /api/tracks/<icao>`: observed arrival and departure paths of the last 3 days, for the map. Also added for this app.
+- `GET /api/weather/<icao>`: the latest METAR and TAF from aviationweather.gov and current conditions at the airport from Open-Meteo, fetched live with every refresh (edge-cached for a minute). The live METAR and TAF replace the snapshot's hourly copy when they are at least as new (`Conditions.merged`), so the ramp status and *Aviation weather* use the newest report; *At the airport now* shows the Open-Meteo values, which are model data in 15-minute steps.
 - `GET /api/live/<icao>`: aircraft within 500 NM from OpenSky or adsb.lol, edge-cached for 2 minutes. Each aircraft's `dir` (inbound, outbound, ground or other) is the server's answer for that fix; the app keeps an airborne aircraft's earlier direction until it lands (`DirectionMemory`), so an arrival on downwind or in a hold stays inbound.
 
 There is no live timetable. As in the Dive, the boards come from each callsign's usual time at the airport over the last 30 days, and the delay is the estimated arrival (or take-off) against that usual time: green under 15 minutes late, amber 15 to 44, red 45 or more. `GroundKit/Logic/BoardBuilder.swift` is a line-for-line port of the Dive's logic, so the app and the dashboard agree. Flights the backend tags as freighters (`is_freighter` in the snapshot history and on `/api/live`, from its list of all-cargo operators) carry a *Freighter* tag; nothing is filtered out, since passenger flights carry belly cargo too.

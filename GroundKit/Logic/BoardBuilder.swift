@@ -17,11 +17,12 @@ nonisolated enum Rag: Sendable, Hashable {
         self = delay < 15 ? .green : delay < 45 ? .amber : .red
     }
 
+    /// "On time", "20 min late", "3 h 5 min early".
     static func text(delay: Double?) -> String {
         guard let delay else { return "No usual time" }
-        if delay < -15 { return "Early \(Int((-delay).rounded())) min" }
+        if delay < -15 { return "\(Int((-delay).rounded()).formattedAge) early" }
         if delay < 15 { return "On time" }
-        return "Late \(Int(delay.rounded())) min"
+        return "\(Int(delay.rounded()).formattedAge) late"
     }
 }
 
@@ -316,7 +317,7 @@ nonisolated struct BoardBuilder: Sendable {
                 let late = dir == .outbound && dep! < 0 ? -dep! : nil
                 rows.append(row(dir, other: seen.otherIata, usual: seen.usualMin,
                                 rag: dir == .outbound ? Rag(delay: late ?? 0) : .unknown,
-                                note: late.flatMap { $0 >= 15 ? "Late \(Int($0.rounded())) min" : nil }))
+                                note: late.flatMap { $0 >= 15 ? "\(Int($0.rounded()).formattedAge) late" : nil }))
             case .other:
                 continue
             }

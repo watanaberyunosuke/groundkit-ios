@@ -25,6 +25,11 @@ nonisolated struct APIClient: Sendable {
         try JSON.decoder().decode(LiveFeed.self, from: try await get("api/live/\(icao)"))
     }
 
+    /// `/api/weather/<icao>`: the live METAR, TAF and current weather at the airport.
+    @concurrent func weather(icao: String) async throws -> LiveWeather {
+        try JSON.decoder().decode(LiveWeather.self, from: try await get("api/weather/\(icao)"))
+    }
+
     /// `/api/tracks/<icao>`: paths of tracked flights over the last 3 days, for the map.
     @concurrent func tracks(icao: String) async throws -> [TrackLine] {
         try JSON.decoder().decode(TracksResponse.self, from: try await get("api/tracks/\(icao)")).tracks

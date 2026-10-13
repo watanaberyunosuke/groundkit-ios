@@ -179,6 +179,106 @@ nonisolated struct LiveAircraft: Codable, Sendable, Hashable {
     var isFreighter: Bool? = nil
 }
 
+/// `/api/weather/<icao>`: the latest METAR and TAF from aviationweather.gov and the current
+/// weather at the airport from Open-Meteo, fetched live by the API (edge-cached for a
+/// minute). Each part is nil when its source failed (named in `failed`).
+nonisolated struct LiveWeather: Codable, Sendable {
+    var time: Int
+    var metar: LiveMetar?
+    var taf: LiveTaf?
+    var local: LocalWeather?
+    var failed: [String]?
+
+    var at: Date { Date(timeIntervalSince1970: TimeInterval(time)) }
+}
+
+/// The METAR columns of fct_airport_conditions, from the live METAR.
+nonisolated struct LiveMetar: Codable, Sendable {
+    var metarObservedAt: Date?
+    var metarRaw: String?
+    var flightCategory: String?
+    var windVariable: Bool?
+    var windDirDeg: Int?
+    var windSpeedKt: Int?
+    var windGustKt: Int?
+    var visibilitySm: Double?
+    var visibilityIsLowerBound: Bool?
+    var ceilingFt: Int?
+    var wxString: String?
+    var tempC: Double?
+    var dewpointC: Double?
+    var altimeterHpa: Double?
+}
+
+nonisolated struct LiveTaf: Codable, Sendable {
+    var tafIssuedAt: Date?
+    var tafValidFrom: Date?
+    var tafValidTo: Date?
+    var tafRaw: String?
+}
+
+/// Open-Meteo's current conditions at the airport's coordinates: model values in 15-minute
+/// steps, not an observation.
+nonisolated struct LocalWeather: Codable, Sendable {
+    var observedAt: Date
+    /// WMO weather code in words ("Light rain"); nil for a code the API doesn't know.
+    var conditions: String?
+    var weatherCode: Int?
+    var isDay: Bool?
+    var tempC: Double?
+    var feelsLikeC: Double?
+    var humidityPct: Int?
+    var dewpointC: Double?
+    /// Over the last 15 minutes.
+    var precipitationMm: Double?
+    var cloudCoverPct: Int?
+    var pressureHpa: Double?
+    var windDirDeg: Int?
+    var windSpeedKt: Int?
+    var windGustKt: Int?
+}
+
+extension Conditions {
+    /// The hourly mart's conditions with the live METAR and TAF laid over them where the live
+    /// ones are at least as new, and the METAR's age counted to `now` (the mart's own age was
+    /// counted when it was built). Without a mart row, the live weather alone.
+    nonisolated static func merged(_ base: Conditions?, live: LiveWeather?, airport: Airport, now: Date = .now) -> Conditions? {
+        var c = base
+        if let m = live?.metar, let observed = m.metarObservedAt,
+           observed >= (base?.metarObservedAt ?? .distantPast) {
+            if c == nil {
+                c = Conditions(icao: airport.icao, iata: airport.iata, name: airport.name,
+                               lat: airport.lat, lon: airport.lon, timezone: airport.timezone)
+            }
+            c?.metarObservedAt = observed
+            c?.metarRaw = m.metarRaw
+            c?.flightCategory = m.flightCategory
+            c?.windVariable = m.windVariable
+            c?.windDirDeg = m.windDirDeg
+            c?.windSpeedKt = m.windSpeedKt
+            c?.windGustKt = m.windGustKt
+            c?.visibilitySm = m.visibilitySm
+            c?.visibilityIsLowerBound = m.visibilityIsLowerBound
+            c?.ceilingFt = m.ceilingFt
+            c?.wxString = m.wxString
+            c?.tempC = m.tempC
+            c?.dewpointC = m.dewpointC
+            c?.altimeterHpa = m.altimeterHpa
+        }
+        if let t = live?.taf, let issued = t.tafIssuedAt, c != nil,
+           issued >= (c?.tafIssuedAt ?? .distantPast) {
+            c?.tafIssuedAt = issued
+            c?.tafValidFrom = t.tafValidFrom
+            c?.tafValidTo = t.tafValidTo
+            c?.tafRaw = t.tafRaw
+        }
+        if let observed = c?.metarObservedAt {
+            c?.metarAgeMin = max(0, Int(now.timeIntervalSince(observed) / 60))
+        }
+        return c
+    }
+}
+
 /// `/api/tracks/<icao>`: observed arrival and departure paths over the last 3 days.
 nonisolated struct TracksResponse: Codable, Sendable {
     var tracks: [TrackLine]

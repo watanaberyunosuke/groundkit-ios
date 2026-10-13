@@ -233,3 +233,82 @@ struct RampAdvisorTimeTests {
                    metarAgeMin: 20)
     }
 }
+
+struct LiveWeatherTests {
+    /// The shape /api/weather serves (a real response for VHHH).
+    static let json = """
+    {"time": 1791872569, "sources": {"aviation": "aviationweather.gov", "local": "Open-Meteo"},
+     "metar": {"metar_observed_at": "2026-10-13T06:00:00+00:00",
+       "metar_raw": "METAR VHHH 130600Z 28005KT 7000 FEW020 SCT030 31/23 Q1015 NOSIG", "flight_category": "MVFR",
+       "wind_variable": false, "wind_dir_deg": 280, "wind_speed_kt": 5, "wind_gust_kt": null, "visibility_sm": 4.35,
+       "visibility_is_lower_bound": false, "ceiling_ft": null, "wx_string": null, "temp_c": 31.0, "dewpoint_c": 23.0,
+       "altimeter_hpa": 1015.0},
+     "taf": {"taf_issued_at": "2026-10-13T05:00:00+00:00", "taf_valid_from": "2026-10-13T06:00:00+00:00",
+       "taf_valid_to": "2026-10-14T12:00:00+00:00", "taf_raw": "TAF VHHH 130500Z 1306/1412 27010KT 7000 FEW030"},
+     "local": {"observed_at": "2026-10-13T06:15:00+00:00", "conditions": "Clear", "weather_code": 0, "is_day": true,
+       "temp_c": 29.6, "feels_like_c": 34.4, "humidity_pct": 65, "dewpoint_c": 22.4, "precipitation_mm": 0.0,
+       "cloud_cover_pct": 6, "pressure_hpa": 1015.7, "wind_dir_deg": 268, "wind_speed_kt": 3, "wind_gust_kt": 6},
+     "failed": []}
+    """
+
+    static func live() throws -> LiveWeather {
+        try JSON.decoder().decode(LiveWeather.self, from: Data(json.utf8))
+    }
+
+    static let hkg = Airport.known.first { $0.icao == "VHHH" }!
+
+    @Test func decodes() throws {
+        let w = try Self.live()
+        #expect(w.metar?.windDirDeg == 280)
+        #expect(w.metar?.flightCategory == "MVFR")
+        #expect(w.taf?.tafRaw?.hasPrefix("TAF VHHH") == true)
+        #expect(w.local?.feelsLikeC == 34.4)
+        #expect(w.local?.humidityPct == 65)
+        #expect(w.failed == [])
+    }
+
+    @Test func newerLiveMetarReplacesTheHourlyCopy() throws {
+        var old = Conditions(icao: "VHHH", iata: "HKG", name: "Hong Kong", lat: 22.3, lon: 113.9, timezone: "Asia/Hong_Kong")
+        old.metarObservedAt = try Date("2026-10-13T00:30:00Z", strategy: .iso8601)
+        old.metarRaw = "METAR VHHH 130030Z VRB03KT 9999 FEW025 28/22 Q1018 NOSIG"
+        old.wxString = "-RA"
+        old.metarAgeMin = 5
+        old.notamsInForce = 5
+        let now = try Date("2026-10-13T06:20:00Z", strategy: .iso8601)
+        let c = try #require(Conditions.merged(old, live: try Self.live(), airport: Self.hkg, now: now))
+        #expect(c.windDirDeg == 280)
+        #expect(c.wxString == nil)
+        #expect(c.tempC == 31)
+        #expect(c.metarAgeMin == 20)
+        #expect(c.tafIssuedAt == (try Date("2026-10-13T05:00:00Z", strategy: .iso8601)))
+        #expect(c.notamsInForce == 5) // not part of the live weather
+    }
+
+    @Test func olderLiveMetarKeepsTheHourlyCopyButCountsItsAge() throws {
+        var newer = Conditions(icao: "VHHH", iata: "HKG", name: "Hong Kong", lat: 22.3, lon: 113.9, timezone: "Asia/Hong_Kong")
+        newer.metarObservedAt = try Date("2026-10-13T06:30:00Z", strategy: .iso8601)
+        newer.windDirDeg = 90
+        let now = try Date("2026-10-13T07:30:00Z", strategy: .iso8601)
+        let c = try #require(Conditions.merged(newer, live: try Self.live(), airport: Self.hkg, now: now))
+        #expect(c.windDirDeg == 90)
+        #expect(c.metarAgeMin == 60)
+    }
+
+    @Test func liveWeatherAloneWithoutASnapshot() throws {
+        let c = try #require(Conditions.merged(nil, live: try Self.live(), airport: Self.hkg))
+        #expect(c.iata == "HKG")
+        #expect(c.altimeterHpa == 1015)
+        #expect(Conditions.merged(nil, live: nil, airport: Self.hkg) == nil)
+    }
+
+    @Test func plainWords() {
+        #expect(WeatherText.tempDew(31, 23) == "31° / 23°C")
+        #expect(WeatherText.tempDew(31, nil) == "31°C")
+        #expect(WeatherText.compassName(280) == "the west")
+        #expect(WeatherText.compassName(44) == "the north-east")
+        #expect(WeatherText.pressure(1015.4) == "1015 hPa")
+        #expect(Rag.text(delay: -185) == "3 h 5 min early")
+        #expect(Rag.text(delay: 20) == "20 min late")
+        #expect(Rag.text(delay: 5) == "On time")
+    }
+}
