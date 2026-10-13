@@ -76,6 +76,8 @@ nonisolated enum RampAdvisor {
         var out: [Advisory] = []
         let wx = (c.wxString ?? "").uppercased()
         let metar = (c.metarRaw ?? "").uppercased()
+        let codes = WeatherText.codes(wx)
+        func has(_ any: String...) -> Bool { any.contains(where: codes.contains) }
 
         // Lightning: the biggest single risk on the ramp, through fuel hoses, headset
         // cords to the aircraft and open ground.
@@ -113,17 +115,47 @@ nonisolated enum RampAdvisor {
                 symbol: "wind"))
         }
 
-        // Ice and snow: slippery apron, de-icing, slower turnarounds.
-        if wx.matches("FZ|SN|PL|GR|GS|IC|SG") {
+        // Hail: injury risk in the open and damage to aircraft skins and GSE.
+        if has("GR", "GS") {
+            out.append(Advisory(
+                id: "hail", severity: .warning, title: "Hail reported",
+                detail: "Shelter in a building or vehicle and protect equipment. Expect hail damage checks before departure.",
+                symbol: "cloud.hail.fill"))
+        }
+        // Squall or funnel cloud: sudden, much stronger wind than the mean.
+        if has("SQ", "FC") {
+            out.append(Advisory(
+                id: "squall", severity: .warning, title: has("FC") ? "Funnel cloud reported" : "Squall reported",
+                detail: "Expect sudden strong wind. Secure ULDs, dollies, stairs and cones, and keep clear of open doors.",
+                symbol: "tornado"))
+        }
+
+        // Ice and snow: slippery apron, de-icing, slower turnarounds. Freezing rain,
+        // drizzle or fog glazes everything it touches, so it is a warning.
+        if has("FZ") {
+            let kind = wx.contains("FZRA") ? "rain" : wx.contains("FZDZ") ? "drizzle" : wx.contains("FZFG") ? "fog" : "precipitation"
+            out.append(Advisory(
+                id: "ice", severity: .warning, title: "Freezing \(kind)",
+                detail: "Ice forms on the apron, stairs, equipment and aircraft. De-icing likely: allow for longer turnarounds and keep clear of de-icing rigs.",
+                symbol: "snowflake"))
+        } else if has("SN", "PL", "IC", "SG") {
             out.append(Advisory(
                 id: "ice", severity: .caution, title: "Ice or snow",
                 detail: "Slippery apron and equipment. De-icing likely: allow for longer turnarounds and keep clear of de-icing rigs.",
                 symbol: "snowflake"))
-        } else if let temp = c.tempC, temp <= 0, wx.matches("RA|DZ") {
+        } else if let temp = c.tempC, temp <= 0, has("RA", "DZ") {
             out.append(Advisory(
                 id: "ice", severity: .caution, title: "Freezing conditions",
                 detail: "Rain at or below 0 °C can glaze the apron and equipment.",
                 symbol: "thermometer.snowflake"))
+        }
+
+        // Dust or sand: eyes, open holds and ULDs.
+        if has("DS", "SS", "SA", "DU") {
+            out.append(Advisory(
+                id: "dust", severity: .caution, title: "Dust or sand",
+                detail: "Wear eye protection. Keep holds and doors closed when not loading, and cover ULDs.",
+                symbol: "sun.dust"))
         }
 
         // Heat and cold stress.
@@ -152,13 +184,36 @@ nonisolated enum RampAdvisor {
                 symbol: "thermometer.snowflake"))
         }
 
-        // Low visibility.
-        if let vis = c.visibilitySm, vis < t.lowVisibilitySm || wx.contains("FG") {
-            let metres = Int((vis * 1609.34 / 50).rounded()) * 50
+        // Low visibility. LIFR and IFR go by the flight category, as on Android; below that,
+        // by the reported visibility or fog.
+        let metres = c.visibilitySm.map { Int(($0 * 1609.34 / 50).rounded()) * 50 }
+        let visWords = c.visibilitySm == nil ? "Visibility not reported"
+            : "Visibility \(WeatherText.visibility(sm: c.visibilitySm, isLowerBound: c.visibilityIsLowerBound))"
+        let ceilingWords = c.ceilingFt.map { ", ceiling \($0.formatted()) ft" } ?? ""
+        if c.flightCategory == "LIFR" {
+            out.append(Advisory(
+                id: "vis", severity: .warning, title: "Low visibility (LIFR)",
+                detail: "\(visWords)\(ceilingWords). Low visibility procedures may be in force: beacons and lights on, extra care near taxiways and moving aircraft.",
+                symbol: "eye.slash"))
+        } else if c.flightCategory == "IFR" {
+            out.append(Advisory(
+                id: "vis", severity: .caution, title: "Reduced visibility (IFR)",
+                detail: "\(visWords)\(ceilingWords). Take extra care near taxiways and moving aircraft.",
+                symbol: "eye.slash"))
+        } else if let metres, let vis = c.visibilitySm, vis < t.lowVisibilitySm || has("FG") {
             out.append(Advisory(
                 id: "vis", severity: .caution, title: "Low visibility, about \(metres) m",
                 detail: "Low visibility procedures may be in force: beacons and lights on, extra care near taxiways and moving aircraft.",
                 symbol: "eye.slash"))
+        }
+
+        // Rain: wet, slippery apron and wet bags. Not when ice or hail already covers it.
+        if has("RA", "DZ", "UP"), !out.contains(where: { ["ice", "hail"].contains($0.id) }) {
+            let heavy = wx.contains("+")
+            out.append(Advisory(
+                id: "rain", severity: .info, title: heavy ? "Heavy rain" : "Rain",
+                detail: "Wet, slippery apron. Keep bags and cargo covered.",
+                symbol: heavy ? "cloud.heavyrain" : "cloud.rain"))
         }
 
         // Information.
