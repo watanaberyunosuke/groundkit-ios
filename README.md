@@ -49,7 +49,7 @@ The app refreshes every 2 minutes while open (the live feed's cache time), fetch
 
 ## Records and sync (CloudKit)
 
-Turnarounds, shifts (with their breaks and summary) and handover notes are SwiftData models (`GroundKit/Models/RampRecords.swift`) stored with `cloudKitDatabase: .automatic`, so they sync through the iCloud private database to every device signed in to the same Apple Account. Without the entitlement or an iCloud account they stay on the device. The models follow CloudKit's rules: defaults on every attribute, no unique constraints, optional relationships with inverses.
+Turnarounds, shifts (with their breaks and summary) and handover notes are SwiftData models (`GroundKit/Models/RampRecords.swift`) stored with `cloudKitDatabase: .automatic`, so they sync through the iCloud private database to every device signed in to the same Apple Account. Without the iCloud entitlement (the default; see Setup) or an iCloud account they stay on the device. The models follow CloudKit's rules: defaults on every attribute, no unique constraints, optional relationships with inverses.
 
 The private database is per Apple Account, so it suits one person's devices or a shared crew iPad. Sharing between colleagues' own phones would need `CKShare` or the public database (see Next steps).
 
@@ -66,8 +66,8 @@ The contract, the Supabase setup and known gaps are in the aviation repo's [docs
 ## Setup
 
 1. Open `GroundKit.xcodeproj` in Xcode 26 or later.
-2. Copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig` (git ignores it) and set `DEVELOPMENT_TEAM` to your team ID; without it the app builds for the simulator only. Change the bundle identifier (`com.harrydatahub.GroundKit`) if it is taken, and the iCloud container (`iCloud.com.harrydatahub.GroundKit` in `Config/GroundKit.entitlements`) to match.
-3. Check the iCloud (CloudKit) and HealthKit capabilities are on. The new `Shift` fields (`breaks`, `summaryData`) are additive, so existing stores migrate on their own; deploy the CloudKit schema again before a release. Xcode creates the container on first run. Before a release, deploy the CloudKit schema to production in the CloudKit Console.
+2. Copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig` (git ignores it) and set `DEVELOPMENT_TEAM` to your team ID; without it the app builds for the simulator only. Change the bundle identifier (`com.harrydatahub.GroundKit`) if it is taken, and the iCloud container (`iCloud.com.harrydatahub.GroundKit` in `Config/GroundKit-iCloud.entitlements`) to match.
+3. Entitlements: `Config/GroundKit.entitlements` (the default) has HealthKit only, so the app signs with a free personal team and keeps records on the device. With a paid Apple Developer Program team, set `GK_ENTITLEMENTS = Config/GroundKit-iCloud.entitlements` in `Config/Local.xcconfig` to add iCloud (CloudKit) and push notifications, which personal teams cannot sign. The new `Shift` fields (`breaks`, `summaryData`) are additive, so existing stores migrate on their own; deploy the CloudKit schema again before a release. Xcode creates the container on first run. Before a release, deploy the CloudKit schema to production in the CloudKit Console.
 4. Accounts: the app uses the GroundKit Supabase project, set in `Config/GroundKit.xcconfig` (`GK_SUPABASE_URL`, `GK_SUPABASE_KEY`, the publishable key) and passed to the app by `Config/Info.plist` as `GKSupabaseURL` and `GKSupabaseKey`. To use another project, override both in `Config/Local.xcconfig`, writing the URL as `https:/$()/<ref>.supabase.co` because xcconfig files read `//` as a comment; set both empty to hide accounts. Sign in with Apple and Microsoft are off: Sign in with Apple needs a paid Apple Developer Program membership.
 5. Run on a device or simulator. Health data is richer on a device paired with an Apple Watch.
 

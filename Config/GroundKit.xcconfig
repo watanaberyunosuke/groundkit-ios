@@ -5,6 +5,12 @@
 // Apple developer team for signing. Left empty, the app builds for the simulator only.
 DEVELOPMENT_TEAM =
 
+// Entitlements. The default (HealthKit only) signs with a free personal team, so records
+// stay on the device. With a paid Apple Developer Program team, set
+// Config/GroundKit-iCloud.entitlements in Local.xcconfig to add iCloud (CloudKit sync)
+// and push notifications, which personal teams cannot sign.
+GK_ENTITLEMENTS = Config/GroundKit.entitlements
+
 // GroundKit accounts: the GroundKit Supabase project, shared with Android and the
 // dashboard. The URL and publishable key are public; they ship inside the app. Set both
 // empty to hide the Account section and keep settings on the device. "$()" keeps the

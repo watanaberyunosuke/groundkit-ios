@@ -3,6 +3,10 @@
 // Your team ID, from Xcode > Settings > Accounts, or developer.apple.com > Membership.
 DEVELOPMENT_TEAM = ABCDE12345
 
+// Only with a paid Apple Developer Program team: iCloud sync of turnarounds, shifts and
+// notes, and the push notifications CloudKit uses. Personal teams cannot sign these.
+// GK_ENTITLEMENTS = Config/GroundKit-iCloud.entitlements
+
 // Only to use a Supabase project other than GroundKit's (set in GroundKit.xcconfig).
 // xcconfig files read "//" as the start of a comment, so put "$()" between the two
 // slashes of the URL.
