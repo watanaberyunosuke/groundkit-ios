@@ -15,16 +15,21 @@ final class AirportStore {
     private(set) var snapshotFetchedAt: Date?
     private(set) var snapshotIsCached = false
     private(set) var live: LiveFeed?
+    /// The live METAR, TAF and current weather at the airport, fetched with each refresh.
+    private(set) var weather: LiveWeather?
     /// Paths of tracked flights for the map; empty when the API has none.
     private(set) var tracks: [TrackLine] = []
     private(set) var snapshotError: String?
     private(set) var liveError: String?
+    private(set) var weatherError: String?
     private(set) var isRefreshing = false
 
     private(set) var placed: [PlacedAircraft] = []
     private(set) var arrivals: Board = .empty
     private(set) var departures: Board = .empty
     private(set) var rampStatus: RampStatus?
+    /// The snapshot's conditions with the live METAR and TAF over them where newer.
+    private(set) var conditions: Conditions?
 
     var thresholds: RampThresholds {
         didSet {
@@ -60,7 +65,8 @@ final class AirportStore {
     var airports: [Airport] { snapshot?.airports ?? Airport.known }
     var airport: Airport { airports.first { $0.icao == icao } ?? Airport.known.first { $0.icao == icao } ?? Airport.known[0] }
     var timeZone: TimeZone { airport.timeZone }
-    var conditions: Conditions? { snapshot?.conditions }
+    /// Current weather at the airport from Open-Meteo; nil until it loads.
+    var localWeather: LocalWeather? { weather?.local }
     var notams: [Notam] { snapshot?.notams ?? [] }
     var rampNotams: [Notam] { notams.filter(RampAdvisor.isRampRelevant) }
 
@@ -72,6 +78,8 @@ final class AirportStore {
         UserDefaults.standard.set(icao, forKey: Keys.airport)
         snapshot = nil
         live = nil
+        weather = nil
+        weatherError = nil
         tracks = []
         memory = FeedMemory()
         directions = DirectionMemory()
@@ -99,8 +107,9 @@ final class AirportStore {
 
         async let snapshotResult: Result<(Snapshot, Data), Error>? = needSnapshot ? capture { try await api.snapshot(icao: icao) } : nil
         async let liveResult = capture { try await api.live(icao: icao) }
+        async let weatherResult = capture { try await api.weather(icao: icao) }
         async let tracksResult: Result<[TrackLine], Error>? = needSnapshot ? capture { try await api.tracks(icao: icao) } : nil
-        let (s, l, t) = await (snapshotResult, liveResult, tracksResult)
+        let (s, l, t, w) = await (snapshotResult, liveResult, tracksResult, weatherResult)
         guard icao == self.icao else { return } // the airport changed while loading
 
         switch s {
@@ -117,6 +126,14 @@ final class AirportStore {
         }
         // Tracks only decorate the map, so a failure keeps the last ones without an error.
         if case .success(let lines)? = t { tracks = lines }
+        switch w {
+        case .success(let feed):
+            weather = feed
+            weatherError = nil
+        case .failure(let error):
+            // Keep the last live weather; the snapshot's copy still fills in behind it.
+            weatherError = error.localizedDescription
+        }
         switch l {
         case .success(let feed):
             live = feed
@@ -161,7 +178,9 @@ final class AirportStore {
 
     /// Recomputes the boards and ramp status after new data.
     private func rebuild() {
-        rampStatus = snapshot.map { RampAdvisor.evaluate($0.conditions, notams: $0.notams, thresholds: thresholds) }
+        conditions = Conditions.merged(snapshot?.conditions, live: weather, airport: airport)
+        rampStatus = snapshot != nil || conditions != nil
+            ? RampAdvisor.evaluate(conditions, notams: notams, thresholds: thresholds) : nil
         guard let snapshot else {
             placed = []
             arrivals = .empty

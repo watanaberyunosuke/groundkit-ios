@@ -113,7 +113,7 @@ struct BoardBuilderTests {
         #expect(LocalTime.hhmm(try #require(placed.eventAt), sydney) == "13:15")
         #expect(placed.delayMin == 30)
         #expect(placed.rag == .amber)
-        #expect(Rag.text(delay: placed.delayMin) == "Late 30 min")
+        #expect(Rag.text(delay: placed.delayMin) == "30 min late")
     }
 
     @Test func callsignFlyingAwayIsNotInbound() throws {
@@ -128,9 +128,9 @@ struct BoardBuilderTests {
         let row = try #require(b.boardLive(placed, now: now).first)
         #expect(row.dir == .outbound)
         #expect(row.rag == .amber)
-        #expect(row.statusNote == "Late 20 min")
+        #expect(row.statusNote == "20 min late")
         let board = b.board(.outbound, live: [row], memory: FeedMemory(), now: now)
-        #expect(board.live.first?.status == "Late 20 min")
+        #expect(board.live.first?.status == "20 min late")
         #expect(board.live.first?.time.map { LocalTime.hhmm($0, sydney) } == "12:40")
     }
 

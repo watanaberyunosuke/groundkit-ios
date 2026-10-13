@@ -15,11 +15,16 @@ struct NowView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Clocks(iata: store.airport.iata, timeZone: store.timeZone)
-                    RampStatusCard(status: store.rampStatus, error: store.snapshotError)
-                    MapCard()
-                    if let c = store.conditions { WeatherTiles(c: c, status: store.rampStatus) }
+                    RampStatusCard(status: store.rampStatus, error: store.snapshotError ?? store.weatherError)
+                    if let c = store.conditions {
+                        AviationWeatherCard(c: c, status: store.rampStatus, live: store.weather?.metar != nil)
+                    }
+                    if let local = store.localWeather {
+                        LocalWeatherCard(w: local, iata: store.airport.iata, timeZone: store.timeZone)
+                    }
                     NextUpCard(title: "Next arrivals", dir: .inbound, board: store.arrivals) { board = .inbound }
                     NextUpCard(title: "Next departures", dir: .outbound, board: store.departures) { board = .outbound }
+                    MapCard()
                     if let weather = store.snapshot?.weather, weather.count > 1 {
                         WindChart(hours: weather, timeZone: store.timeZone,
                                   cautionKt: store.thresholds.windCautionKt, warningKt: store.thresholds.windWarningKt)
@@ -120,56 +125,93 @@ struct RampStatusCard: View {
         .background(status == nil ? Color.secondary.opacity(0.15) : severity.container, in: .rect(cornerRadius: 16))
     }
 
-    /// "Thunderstorms forecast +1 more", or the all-clear.
+    /// "Thunderstorms forecast and 1 more", or the all-clear with a count of notes, so
+    /// "Normal ops" never sits over a hazard-sounding line.
     private func summary(_ hazards: [Advisory]) -> String {
-        guard status != nil else { return "Fetching the latest METAR" }
-        guard let first = hazards.first else { return "No weather hazards in the latest METAR" }
-        return first.title + (hazards.count > 1 ? "  +\(hazards.count - 1) more" : "")
+        guard status != nil else { return "Fetching the latest weather" }
+        let serious = hazards.filter { $0.severity >= .caution }
+        let notes = hazards.count - serious.count
+        guard let first = serious.first else {
+            return "No weather hazards" + (notes > 0 ? " · \(notes) note\(notes == 1 ? "" : "s")" : "")
+        }
+        return first.title + (serious.count > 1 ? " and \(serious.count - 1) more" : "")
     }
 }
 
-struct WeatherTiles: View {
+/// The latest METAR as plain readings: what the airport is reporting for aircraft.
+struct AviationWeatherCard: View {
     var c: Conditions
     var status: RampStatus?
+    /// From the live METAR rather than the hourly copy.
+    var live: Bool
 
     var body: some View {
-        let columns = [GridItem(.adaptive(minimum: 160), spacing: 12)]
-        LazyVGrid(columns: columns, spacing: 12) {
-            Tile(title: "Wind",
-                 value: WeatherText.wind(dir: c.windDirDeg, variable: c.windVariable, speed: c.windSpeedKt, gust: c.windGustKt),
-                 detail: c.windDirDeg.map { "From \(compass($0))" },
-                 systemImage: "wind",
-                 tint: windTint)
-            Tile(title: "Temperature",
-                 value: c.tempC.map { "\(Int($0.rounded())) °C" } ?? "–",
-                 detail: status?.feelsLikeC.map { "Feels like \(Int($0.rounded())) °C" },
-                 systemImage: "thermometer.medium")
-            Tile(title: "Weather",
-                 value: WeatherText.describe(c.wxString) ?? "No significant weather",
-                 detail: weatherDetail,
-                 systemImage: "cloud.sun")
-            Tile(title: "Visibility",
-                 value: WeatherText.visibility(sm: c.visibilitySm, isLowerBound: c.visibilityIsLowerBound),
-                 detail: c.ceilingFt.map { "Ceiling \($0.formatted()) ft" },
-                 systemImage: "eye")
+        Card(title: "Aviation weather", systemImage: "airplane") {
+            SourceLine(text: sourceText)
+            TileGrid(tiles: [
+                Tile(title: "Wind",
+                     value: WeatherText.wind(dir: c.windDirDeg, variable: c.windVariable, speed: c.windSpeedKt, gust: c.windGustKt),
+                     detail: c.windVariable == true ? "Changing direction" : c.windDirDeg.map { "From \(WeatherText.compassName($0))" },
+                     systemImage: "wind", tint: windTint),
+                Tile(title: "Visibility",
+                     value: WeatherText.visibility(sm: c.visibilitySm, isLowerBound: c.visibilityIsLowerBound),
+                     detail: WeatherText.category(c.flightCategory), systemImage: "eye"),
+                Tile(title: "Weather", value: WeatherText.describe(c.wxString) ?? "Nothing significant",
+                     systemImage: "cloud.sun"),
+                Tile(title: "Cloud ceiling", value: c.ceilingFt.map { "\($0.formatted()) ft" } ?? "None",
+                     detail: c.ceilingFt == nil ? "No broken or overcast layer" : "Lowest broken or overcast layer",
+                     systemImage: "cloud"),
+                Tile(title: "Temperature", value: WeatherText.temp(c.tempC),
+                     detail: [c.dewpointC.map { "Dew point \(WeatherText.temp($0))" },
+                              status?.feelsLikeC.map { "feels like \(WeatherText.temp($0))" }].compactMap(\.self).joined(separator: ", "),
+                     systemImage: "thermometer.medium"),
+                Tile(title: "Pressure", value: WeatherText.pressure(c.altimeterHpa), detail: "QNH, for altimeters",
+                     systemImage: "gauge.with.dots.needle.50percent"),
+            ])
         }
     }
 
-    /// Flight category and QNH, one per line.
-    private var weatherDetail: String? {
-        let lines = [c.flightCategory.map { "Flight category \($0)" },
-                     c.altimeterHpa.map { "QNH \(Int($0.rounded())) hPa" }].compactMap(\.self)
-        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    /// "METAR 06:00Z, 15 min ago".
+    private var sourceText: String {
+        guard let at = c.metarObservedAt else { return "No METAR yet" }
+        let age = c.metarAgeMin.map { $0 < 1 ? ", just now" : ", \($0.formattedAge) ago" } ?? ""
+        return "METAR \(LocalTime.hhmm(at, .gmt))Z\(age)" + (live ? "" : " (hourly copy)")
     }
 
     private var windTint: Color {
         let wind = max(c.windSpeedKt ?? 0, c.windGustKt ?? 0)
         return wind >= 40 ? .statusWarning : wind >= 25 ? .statusCaution : .primary
     }
+}
 
-    private func compass(_ deg: Int) -> String {
-        let points = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-        return points[Int((Double(deg) / 45).rounded()) % 8]
+/// Current weather at the airport's coordinates from Open-Meteo: what it feels like outside.
+struct LocalWeatherCard: View {
+    var w: LocalWeather
+    var iata: String
+    var timeZone: TimeZone
+
+    var body: some View {
+        Card(title: "At the airport now", systemImage: "location") {
+            SourceLine(text: "Open-Meteo forecast model, \(LocalTime.hhmm(w.observedAt, timeZone)) \(iata) time")
+            TileGrid(tiles: [
+                Tile(title: "Sky", value: w.conditions ?? "–",
+                     detail: w.cloudCoverPct.map { "Cloud cover \($0)%" },
+                     systemImage: WeatherText.symbol(wmo: w.weatherCode, isDay: w.isDay ?? true)),
+                Tile(title: "Feels like", value: WeatherText.temp(w.feelsLikeC ?? w.tempC),
+                     detail: [w.tempC.map { "Air \(WeatherText.temp($0))" }, w.humidityPct.map { "humidity \($0)%" }]
+                        .compactMap(\.self).joined(separator: ", "),
+                     systemImage: "thermometer.sun"),
+                Tile(title: "Wind",
+                     value: WeatherText.wind(dir: w.windDirDeg, variable: false, speed: w.windSpeedKt, gust: w.windGustKt),
+                     detail: w.windDirDeg.map { "From \(WeatherText.compassName($0))" }, systemImage: "wind"),
+                Tile(title: "Rain", value: rainText, detail: "Last 15 minutes", systemImage: "drop"),
+            ])
+        }
+    }
+
+    private var rainText: String {
+        guard let mm = w.precipitationMm else { return "–" }
+        return mm < 0.05 ? "None" : String(format: "%.1f mm", mm)
     }
 }
 
@@ -185,6 +227,7 @@ struct NextUpCard: View {
         // Still to handle: arrivals in the air, departures on the ground.
         let live = board.live.filter { dir == .inbound ? !$0.onGround : $0.onGround }
         let upcoming = Array((live + board.next).prefix(4))
+            .sorted { ($0.time ?? .distantFuture) < ($1.time ?? .distantFuture) }
         Card(title: title, systemImage: dir == .inbound ? "airplane.arrival" : "airplane.departure") {
             if upcoming.isEmpty {
                 Text(store.snapshot == nil ? "Loading…" : "Nothing expected in the next \(Int(BoardBuilder.nextHours)) hours.")
@@ -198,7 +241,7 @@ struct NextUpCard: View {
                     FlightCode(iata: e.flightIata, callsign: e.callsign)
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(e.other ?? "–").font(.headline)
+                        if let other = e.other { Text(other).font(.headline) }
                         if e.phase == .live { StatusPill(rag: e.rag, text: e.status) }
                         else { Text("Expected").font(.subheadline).foregroundStyle(.secondary) }
                     }
@@ -333,17 +376,26 @@ struct NotamsCard: View {
 struct RawWeatherCard: View {
     var c: Conditions
 
+    private static let day: Date.FormatStyle = {
+        var style = Date.FormatStyle.dateTime.day().month(.abbreviated)
+        style.timeZone = .gmt
+        return style
+    }()
+
     var body: some View {
         Card(title: "METAR and TAF", systemImage: "text.alignleft") {
             if let metar = c.metarRaw {
                 Text(metar).font(.callout.monospaced()).textSelection(.enabled)
                 if let age = c.metarAgeMin {
-                    Text("Observed \(age.formattedAge) ago").font(.caption).foregroundStyle(.secondary)
+                    Text(age < 1 ? "Observed just now" : "Observed \(age.formattedAge) ago").font(.caption).foregroundStyle(.secondary)
                 }
             }
             if let taf = c.tafRaw {
                 Divider()
                 Text(taf).font(.callout.monospaced()).textSelection(.enabled)
+                if let to = c.tafValidTo {
+                    Text("Forecast valid to \(to.formatted(Self.day)) \(LocalTime.hhmm(to, .gmt))Z").font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
     }

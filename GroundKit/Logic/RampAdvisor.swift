@@ -146,7 +146,7 @@ nonisolated enum RampAdvisor {
         } else if let temp = c.tempC, temp <= 0, has("RA", "DZ") {
             out.append(Advisory(
                 id: "ice", severity: .caution, title: "Freezing conditions",
-                detail: "Rain at or below 0 °C can glaze the apron and equipment.",
+                detail: "Rain at or below 0°C can glaze the apron and equipment.",
                 symbol: "thermometer.snowflake"))
         }
 
@@ -163,23 +163,23 @@ nonisolated enum RampAdvisor {
         let chill = c.tempC.flatMap { t in c.windSpeedKt.map { HeatStress.windChillC(tempC: t, windKt: Double($0)) } }
         if let heat, heat >= t.heatWarningC {
             out.append(Advisory(
-                id: "heat", severity: .warning, title: "Extreme heat, feels like \(Int(heat.rounded())) °C",
+                id: "heat", severity: .warning, title: "Extreme heat, feels like \(Int(heat.rounded()))°C",
                 detail: "Rotate crews, take shade breaks and drink water every 15 to 20 minutes. Watch each other for heat illness.",
                 symbol: "sun.max.trianglebadge.exclamationmark"))
         } else if let heat, heat >= t.heatCautionC {
             out.append(Advisory(
-                id: "heat", severity: .caution, title: "Heat stress, feels like \(Int(heat.rounded())) °C",
+                id: "heat", severity: .caution, title: "Heat stress, feels like \(Int(heat.rounded()))°C",
                 detail: "Drink about 250 ml every 20 minutes, even if not thirsty. Take breaks in the shade.",
                 symbol: "sun.max"))
         }
         if let chill, chill <= t.windChillWarningC {
             out.append(Advisory(
-                id: "cold", severity: .warning, title: "Frostbite risk, wind chill \(Int(chill.rounded())) °C",
+                id: "cold", severity: .warning, title: "Frostbite risk, wind chill \(Int(chill.rounded()))°C",
                 detail: "Exposed skin can freeze in 30 minutes or less. Cover up fully and limit time outside.",
                 symbol: "thermometer.snowflake"))
         } else if let chill, chill <= t.windChillCautionC {
             out.append(Advisory(
-                id: "cold", severity: .caution, title: "Very cold, wind chill \(Int(chill.rounded())) °C",
+                id: "cold", severity: .caution, title: "Very cold, wind chill \(Int(chill.rounded()))°C",
                 detail: "Wear insulated gloves and cover exposed skin. Warm up between tasks.",
                 symbol: "thermometer.snowflake"))
         }

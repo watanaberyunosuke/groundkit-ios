@@ -85,4 +85,53 @@ nonisolated enum WeatherText {
         if metres >= 5000 { return "\(Int((metres / 1000).rounded())) km" }
         return "\(Int((metres / 100).rounded()) * 100) m"
     }
+
+    /// "the west", "the north-east": where the wind comes from, in words.
+    static func compassName(_ deg: Int) -> String {
+        let points = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"]
+        return "the " + points[Int((Double(deg) / 45).rounded()) % 8]
+    }
+
+    /// "31°C".
+    static func temp(_ c: Double?) -> String {
+        c.map { "\(Int($0.rounded()))°C" } ?? "–"
+    }
+
+    /// "31° / 23°C": temperature and dew point, as on the dashboard.
+    static func tempDew(_ temp: Double?, _ dew: Double?) -> String {
+        guard let temp else { return "–" }
+        guard let dew else { return self.temp(temp) }
+        return "\(Int(temp.rounded()))° / \(Int(dew.rounded()))°C"
+    }
+
+    /// "1015 hPa".
+    static func pressure(_ hpa: Double?) -> String {
+        hpa.map { "\(Int($0.rounded())) hPa" } ?? "–"
+    }
+
+    /// Plain words for a flight category, for people who don't fly.
+    static func category(_ code: String?) -> String? {
+        switch code {
+        case "VFR": "Good for flying (VFR)"
+        case "MVFR": "Marginal for flying (MVFR)"
+        case "IFR": "Poor, instruments only (IFR)"
+        case "LIFR": "Very poor (LIFR)"
+        default: code
+        }
+    }
+
+    /// An SF Symbol for a WMO weather code (Open-Meteo), by day or night.
+    static func symbol(wmo code: Int?, isDay: Bool) -> String {
+        switch code ?? -1 {
+        case 0: isDay ? "sun.max" : "moon.stars"
+        case 1, 2: isDay ? "cloud.sun" : "cloud.moon"
+        case 3: "cloud"
+        case 45, 48: "cloud.fog"
+        case 51...57: "cloud.drizzle"
+        case 61...67, 80...82: "cloud.rain"
+        case 71...77, 85, 86: "cloud.snow"
+        case 95...99: "cloud.bolt.rain"
+        default: "cloud.sun"
+        }
+    }
 }
