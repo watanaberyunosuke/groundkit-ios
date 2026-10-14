@@ -13,7 +13,7 @@ nonisolated struct SupabaseConfig: Sendable, Hashable {
     static let callbackURL = "groundkit://auth-callback"
     /// Email links (confirm address, reset password) open the web dashboard, which handles
     /// them; the app then signs in with the password.
-    static let webURL = "https://groundkit-dashboard.harrydatahub.com/"
+    static let webURL = "https://dashboard.getgroundkit.com/"
 
     static func fromBundle(_ bundle: Bundle = .main) -> SupabaseConfig? {
         from(url: bundle.object(forInfoDictionaryKey: "GKSupabaseURL") as? String,
