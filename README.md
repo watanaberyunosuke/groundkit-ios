@@ -1,5 +1,7 @@
 # GroundKit (iOS)
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/P5V328S6C2)
+
 An iPhone and iPad app for apron, ramp and cargo staff at the airports covered by [groundkit-dashboard](https://github.com/watanaberyunosuke/groundkit-dashboard): Sydney, Melbourne, Brisbane, Singapore, Hong Kong, Amsterdam and Anchorage. It uses the same backend as the web dashboard, the Vercel API over the MotherDuck warehouse, with a front end built for working outside: large type, 60 pt buttons for gloved hands, and status shown by symbol and words as well as colour.
 
 SwiftUI, SwiftData with CloudKit sync, HealthKit and Swift Charts. iOS 18 or later.
