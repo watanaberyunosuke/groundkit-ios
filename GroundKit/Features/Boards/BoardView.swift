@@ -62,7 +62,7 @@ struct BoardView: View {
                 }
                 Section { FreshnessFooter() }
             }
-            .listStyle(.insetGrouped)
+            .groupedListStyle()
             .searchable(text: $search, prompt: "Flight, callsign or airport")
             .navigationTitle(fixedDir == nil ? "Flights" : arriving ? "Arrivals" : "Departures")
             .rampToolbar()
@@ -216,7 +216,7 @@ struct FlightDetailView: View {
                 }
             }
             .navigationTitle(entry.label)
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }

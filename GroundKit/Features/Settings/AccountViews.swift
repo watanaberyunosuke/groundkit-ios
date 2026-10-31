@@ -87,8 +87,7 @@ struct SignInView: View {
                     }
                     TextField("Email", text: $email)
                         .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
+                        .emailEntry()
                         .autocorrectionDisabled()
                     SecureField("Password", text: $password)
                         .textContentType(mode == .create ? .newPassword : .password)
@@ -122,8 +121,9 @@ struct SignInView: View {
                     Section { Label(notice, systemImage: "envelope.fill") }
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle(mode == .create ? "Create account" : "Sign in")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
@@ -231,8 +231,9 @@ struct AccountView: View {
                 }
             }
         }
+        .formStyle(.grouped)
         .navigationTitle("Account")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitle()
         .disabled(busy)
         .onAppear { name = account.displayName ?? "" }
         .confirmationDialog("Delete your GroundKit account?", isPresented: $confirmDelete, titleVisibility: .visible) {

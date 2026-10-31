@@ -45,7 +45,7 @@ struct TurnaroundDetailView: View {
             .padding()
         }
         .navigationTitle(t.label)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitle()
         .sensoryFeedback(.success, trigger: lastDone)
         .onAppear { openedAt = .now }
         .onDisappear { if deleteOnDisappear { context.delete(turnaround) } }
@@ -199,7 +199,7 @@ struct LabeledField: View {
             Text(title).font(.headline)
             TextField(title, text: $text)
                 .multilineTextAlignment(.trailing)
-                .textInputAutocapitalization(.characters)
+                .capitalsEntry()
                 .autocorrectionDisabled()
         }
         .frame(minHeight: 44)

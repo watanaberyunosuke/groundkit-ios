@@ -11,6 +11,10 @@ DEVELOPMENT_TEAM =
 // and push notifications, which personal teams cannot sign.
 GK_ENTITLEMENTS = Config/GroundKit.entitlements
 
+// The Mac app's entitlements: sandbox, network and location. Signs with a free personal
+// team, or locally ("Sign to Run Locally") without one.
+GK_MAC_ENTITLEMENTS = Config/GroundKit-macOS.entitlements
+
 // GroundKit accounts: the GroundKit Supabase project, shared with Android and the
 // dashboard. The URL and publishable key are public; they ship inside the app. Set both
 // empty to hide the Account section and keep settings on the device. "$()" keeps the

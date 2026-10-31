@@ -1,8 +1,8 @@
-# GroundKit (iOS)
+# GroundKit (iOS and Mac)
 
-An iPhone and iPad app for apron, ramp and cargo staff at the airports covered by [groundkit-dashboard](https://github.com/watanaberyunosuke/groundkit-dashboard): Sydney, Melbourne, Brisbane, Singapore, Hong Kong, Amsterdam and Anchorage. It uses the same backend as the web dashboard, the Vercel API over the MotherDuck warehouse, with a front end built for working outside: large type, 60 pt buttons for gloved hands, and status shown by symbol and words as well as colour.
+An iPhone, iPad and Mac app for apron, ramp and cargo staff at the airports covered by [groundkit-dashboard](https://github.com/watanaberyunosuke/groundkit-dashboard): Sydney, Melbourne, Brisbane, Singapore, Hong Kong, Amsterdam and Anchorage. It uses the same backend as the web dashboard, the Vercel API over the MotherDuck warehouse, with a front end built for working outside: large type, 60 pt buttons for gloved hands, and status shown by symbol and words as well as colour.
 
-SwiftUI, SwiftData with CloudKit sync, HealthKit and Swift Charts. iOS 18 or later.
+SwiftUI, SwiftData with CloudKit sync, HealthKit and Swift Charts. iOS 18 or later; macOS 15 or later (see Mac).
 
 ## What it does
 
@@ -64,13 +64,25 @@ Settings > Account signs in with an email and password or with Google (`ASWebAut
 
 The contract, the Supabase setup and known gaps are in the aviation repo's [docs/accounts.md](https://github.com/watanaberyunosuke/groundkit-dashboard/blob/main/docs/accounts.md).
 
+## Mac
+
+The same target builds a native macOS app (not Mac Catalyst): choose *My Mac* as the run destination. iOS-only APIs are wrapped in `Design/Platform.swift`; the airport map has an AppKit version of its map view.
+
+- One window, with the tabs in a sidebar. View menu: the tabs (Command-1 to 4) and Refresh (Command-R). Settings opens in its own window (Command-comma). The map and the enlarged boards open as large sheets.
+- No Health on a Mac: the Shift tab keeps time on shift, breaks, water, rest and weekly hours, without steps, heart rate, sleep or noise.
+- Location: the Mac has no "while using" level, so the map shows your position once GroundKit is allowed in System Settings > Privacy & Security > Location Services.
+- Records stay on the Mac. `Config/GroundKit-macOS.entitlements` (sandbox, network, location) has no iCloud; syncing with the iPhone needs a paid team and an iCloud copy of that file.
+- The account session is kept in the login keychain. Built without a `DEVELOPMENT_TEAM` (signed to run locally), macOS can ask for keychain access after a rebuild.
+- Without a paid team the app can't be notarised: another Mac blocks it at first launch until it is allowed in System Settings > Privacy & Security.
+- The Mac icon is the iOS artwork on the macOS rounded tile (`AppIcon-mac-*.png` in the app icon set). Regenerate them when the icon changes.
+
 ## Setup
 
 1. Open `GroundKit.xcodeproj` in Xcode 26 or later.
 2. Copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig` (git ignores it) and set `DEVELOPMENT_TEAM` to your team ID; without it the app builds for the simulator only. Change the bundle identifier (`com.harrydatahub.GroundKit`) if it is taken, and the iCloud container (`iCloud.com.harrydatahub.GroundKit` in `Config/GroundKit-iCloud.entitlements`) to match.
 3. Entitlements: `Config/GroundKit.entitlements` (the default) has HealthKit only, so the app signs with a free personal team and keeps records on the device. With a paid Apple Developer Program team, set `GK_ENTITLEMENTS = Config/GroundKit-iCloud.entitlements` in `Config/Local.xcconfig` to add iCloud (CloudKit) and push notifications, which personal teams cannot sign. The new `Shift` fields (`breaks`, `summaryData`) are additive, so existing stores migrate on their own; deploy the CloudKit schema again before a release. Xcode creates the container on first run. Before a release, deploy the CloudKit schema to production in the CloudKit Console.
 4. Accounts: the app uses the GroundKit Supabase project, set in `Config/GroundKit.xcconfig` (`GK_SUPABASE_URL`, `GK_SUPABASE_KEY`, the publishable key) and passed to the app by `Config/Info.plist` as `GKSupabaseURL` and `GKSupabaseKey`. To use another project, override both in `Config/Local.xcconfig`, writing the URL as `https:/$()/<ref>.supabase.co` because xcconfig files read `//` as a comment; set both empty to hide accounts. Sign in with Apple and Microsoft are off: Sign in with Apple needs a paid Apple Developer Program membership.
-5. Run on a device or simulator. Health data is richer on a device paired with an Apple Watch.
+5. Run on a device, a simulator or My Mac. Health data is richer on a device paired with an Apple Watch.
 
 The app was called Ramp Ops until October 2026. The bundle identifier and iCloud container changed with the name, so GroundKit installs as a new app and starts with an empty iCloud store; turnarounds, shifts and notes saved by Ramp Ops are not carried over.
 
@@ -86,9 +98,10 @@ then set the API address in Settings to `http://localhost:8000`, or launch with 
 
 ```bash
 xcodebuild test -scheme GroundKit -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+xcodebuild test -scheme GroundKit -destination 'platform=macOS' CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=
 ```
 
-GitHub Actions runs the same on every pull request and push to `main` (`.github/workflows/ios.yml`), on the newest iPhone simulator of the runner's Xcode.
+GitHub Actions runs both on every pull request and push to `main` (`.github/workflows/ios.yml`): the newest iPhone simulator of the runner's Xcode, then the Mac.
 
 Swift Testing covers the board logic (placement, ETA, delay, on-stand lateness, predicted flights, landings remembered across fixes, coverage gaps), the ramp advisories (thunderstorms, storm clouds, TAF validity, wind limits, heat index, wind chill, ice, low visibility, stale weather, NOTAM relevance), METAR wording, decoding the API's JSON, sunrise and sunset (HKG and LHR, polar night), the fatigue, rest, weekly-hours, heat-strain and break rules, the OpenStreetMap layout parser, place search and road routes (including one-way roads), and the account sync (settings merge, PKCE, session and error parsing). The same cases as the Android app's tests.
 
@@ -102,7 +115,8 @@ GroundKit/
                 OpenStreetMap layouts (Overpass), LocationTracker
   Logic/        BoardBuilder (from the Dive), RampAdvisor, WeatherText, Geo and local time,
                 AirportLayout and RoadGraph, Wellbeing (fatigue, heat strain), Solar
-  Design/       shared components: cards, tiles, status pills, big buttons, clocks
+  Design/       shared components: cards, tiles, status pills, big buttons, clocks;
+                Platform.swift (iOS and Mac differences)
   Features/     Now, Map, Boards, Turnarounds, Shift, Settings
 GroundKitTests/   Swift Testing
 Config/         Info.plist additions, entitlements, build settings (GroundKit.xcconfig, your Local.xcconfig)
