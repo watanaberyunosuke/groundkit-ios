@@ -111,7 +111,10 @@ struct RootView: View {
         .tabViewStyle(.sidebarAdaptable)
         #endif
         // Glove mode: larger text and controls everywhere, on top of the user's setting.
+        // iOS only: on the Mac the synced value is kept for the phone but not applied.
+        #if os(iOS)
         .dynamicTypeSize(gloveMode ? .xxLarge ... .accessibility3 : .xSmall ... .accessibility5)
+        #endif
         .preferredColorScheme(appearance.colorScheme(for: store.airport, at: minute))
         .task { await store.autoRefresh() }
         .task { account.attach(store) }

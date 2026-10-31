@@ -69,6 +69,7 @@ The contract, the Supabase setup and known gaps are in the aviation repo's [docs
 The same target builds a native macOS app (not Mac Catalyst): choose *My Mac* as the run destination. iOS-only APIs are wrapped in `Design/Platform.swift`; the airport map has an AppKit version of its map view.
 
 - One window, with the tabs in a sidebar. View menu: the tabs (Command-1 to 4) and Refresh (Command-R). Settings opens in its own window (Command-comma). The map and the enlarged boards open as large sheets.
+- No glove mode: it is for touch screens. The setting still syncs, so the phone keeps it.
 - No Health on a Mac: the Shift tab keeps time on shift, breaks, water, rest and weekly hours, without steps, heart rate, sleep or noise.
 - Location: the Mac has no "while using" level, so the map shows your position once GroundKit is allowed in System Settings > Privacy & Security > Location Services.
 - Records stay on the Mac. `Config/GroundKit-macOS.entitlements` (sandbox, network, location) has no iCloud; syncing with the iPhone needs a paid team and an iCloud copy of that file.

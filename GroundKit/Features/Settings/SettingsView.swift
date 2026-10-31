@@ -22,7 +22,10 @@ struct SettingsView: View {
                     }
                 }
                 Section {
+                    #if os(iOS)
+                    // Glove mode is for touch screens; the Mac doesn't offer it.
                     Toggle("Glove mode (larger text and buttons)", isOn: $gloveMode)
+                    #endif
                     Toggle("Keep screen on", isOn: $keepAwake)
                 } header: {
                     Text("On the ramp")
