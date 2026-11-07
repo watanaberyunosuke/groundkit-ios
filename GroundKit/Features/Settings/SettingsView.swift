@@ -9,12 +9,13 @@ struct SettingsView: View {
     @AppStorage("appearance") private var appearance = Appearance.auto
     @AppStorage("age") private var age = 0
     @State private var urlText = ""
+    @State private var showSignIn = false
 
     var body: some View {
         @Bindable var store = store
         NavigationStack {
             Form {
-                AccountSection()
+                AccountSection(showSignIn: $showSignIn)
                 Section("Airport") {
                     Picker("Airport", selection: Binding(get: { store.icao }, set: { store.select($0) })) {
                         ForEach(store.airports.sorted { $0.iata < $1.iata }) { Text("\($0.iata)  \($0.name)").tag($0.icao) }
@@ -71,7 +72,6 @@ struct SettingsView: View {
                         }
                     }
                 }
-                .task { await health.checkForNewTypes() }
                 Section {
                     TextField("API base URL", text: $urlText)
                         .keyboardType(.URL)
@@ -88,6 +88,9 @@ struct SettingsView: View {
                     Text("Weather, NOTAMs and flight history from the aviation data pipeline (MotherDuck, refreshed hourly). Live positions from adsb.lol (ODbL) or the OpenSky Network. Not an official source: advisory only.")
                 }
             }
+            // On the form, not a section: a section passes its modifiers to every row.
+            .sheet(isPresented: $showSignIn) { SignInView() }
+            .task { await health.checkForNewTypes() }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
