@@ -20,6 +20,7 @@ struct TurnaroundListView: View {
                         Text("Completed").tag(true)
                     }
                     .pickerStyle(.segmented)
+                    .labelsHidden()
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
                 }
@@ -36,6 +37,7 @@ struct TurnaroundListView: View {
                                 .buttonStyle(BigButtonStyle())
                         }
                     }
+                    .frame(maxWidth: .infinity)
                 }
                 ForEach(here) { t in
                     NavigationLink(value: t) { TurnaroundRow(turnaround: t, timeZone: store.timeZone) }
@@ -138,17 +140,17 @@ struct NewTurnaroundView: View {
             Form {
                 Section("Flight") {
                     TextField("Flight or callsign (QF1 / QFA1)", text: $flight)
-                        .textInputAutocapitalization(.characters)
+                        .capitalsEntry()
                         .autocorrectionDisabled()
                     TextField("Stand", text: $stand)
-                        .textInputAutocapitalization(.characters)
+                        .capitalsEntry()
                     TextField("Registration (VH-OQA)", text: $registration)
-                        .textInputAutocapitalization(.characters)
+                        .capitalsEntry()
                         .autocorrectionDisabled()
                 }
                 Section("Route") {
-                    TextField("From", text: $origin).textInputAutocapitalization(.characters)
-                    TextField("To", text: $destination).textInputAutocapitalization(.characters)
+                    TextField("From", text: $origin).capitalsEntry()
+                    TextField("To", text: $destination).capitalsEntry()
                 }
                 Section {
                     Toggle("Target off-block time", isOn: $hasTarget)
@@ -161,8 +163,9 @@ struct NewTurnaroundView: View {
                     Text("Times are \(store.airport.iata) local. Dangerous goods adds the NOTOC step.")
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle("New turnaround")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

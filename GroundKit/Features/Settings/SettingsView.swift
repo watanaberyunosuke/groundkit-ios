@@ -22,7 +22,10 @@ struct SettingsView: View {
                     }
                 }
                 Section {
+                    #if os(iOS)
+                    // Glove mode is for touch screens; the Mac doesn't offer it.
                     Toggle("Glove mode (larger text and buttons)", isOn: $gloveMode)
+                    #endif
                     Toggle("Keep screen on", isOn: $keepAwake)
                 } header: {
                     Text("On the ramp")
@@ -74,8 +77,7 @@ struct SettingsView: View {
                 }
                 Section {
                     TextField("API base URL", text: $urlText)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
+                        .urlEntry()
                         .autocorrectionDisabled()
                         .onSubmit(applyURL)
                     Button("Use default") {
@@ -88,11 +90,12 @@ struct SettingsView: View {
                     Text("Weather, NOTAMs and flight history from the aviation data pipeline (MotherDuck, refreshed hourly). Live positions from adsb.lol (ODbL) or the OpenSky Network. Not an official source: advisory only.")
                 }
             }
+            .formStyle(.grouped)
             // On the form, not a section: a section passes its modifiers to every row.
             .sheet(isPresented: $showSignIn) { SignInView() }
             .task { await health.checkForNewTypes() }
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {

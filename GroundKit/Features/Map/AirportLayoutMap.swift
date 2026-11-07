@@ -154,8 +154,8 @@ struct AirportLayoutScreen: View {
         .padding(12)
     }
 
-    private func legendItem(_ color: UIColor, _ text: String) -> some View {
-        Label { Text(text) } icon: { Circle().fill(Color(uiColor: color)).frame(width: 10, height: 10) }
+    private func legendItem(_ color: PlatformColor, _ text: String) -> some View {
+        Label { Text(text) } icon: { Circle().fill(Color(platform: color)).frame(width: 10, height: 10) }
     }
 
     @ViewBuilder
@@ -331,10 +331,10 @@ private struct PlaceSearchSheet: View {
                                                              : "Nothing matches \"\(query)\"."))
                 }
             }
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
+            .searchable(text: $query, placement: .alwaysVisible,
                         prompt: "Gate 23, stand N5, taxiway K, cargo…")
             .navigationTitle("Find")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
         }
         .presentationDetents([.large])
     }
@@ -344,10 +344,10 @@ private struct PlaceSearchSheet: View {
 
 /// Colours for the layout, light and dark.
 struct LayoutStyle: Equatable {
-    var apron, apronEdge, terminal, terminalEdge, cargo, cargoEdge: UIColor
-    var hangar, building, buildingEdge, runway, runwayMark: UIColor
-    var taxiPavement, taxiLine, taxiSign, holding, jetBridge, gate: UIColor
-    var serviceRoad, road, route, routeHalo, selected, label, labelHalo: UIColor
+    var apron, apronEdge, terminal, terminalEdge, cargo, cargoEdge: PlatformColor
+    var hangar, building, buildingEdge, runway, runwayMark: PlatformColor
+    var taxiPavement, taxiLine, taxiSign, holding, jetBridge, gate: PlatformColor
+    var serviceRoad, road, route, routeHalo, selected, label, labelHalo: PlatformColor
     var dark: Bool
 
     init(dark: Bool) {
@@ -377,7 +377,7 @@ struct LayoutStyle: Equatable {
         }
     }
 
-    func areaFill(_ k: AreaKind) -> UIColor {
+    func areaFill(_ k: AreaKind) -> PlatformColor {
         switch k {
         case .runway: runway
         case .apron: apron
@@ -388,7 +388,7 @@ struct LayoutStyle: Equatable {
         }
     }
 
-    func areaStroke(_ k: AreaKind) -> UIColor {
+    func areaStroke(_ k: AreaKind) -> PlatformColor {
         switch k {
         case .runway: runway
         case .apron: apronEdge
@@ -398,20 +398,13 @@ struct LayoutStyle: Equatable {
         }
     }
 
-    func labelColor(_ k: PlaceKind) -> UIColor {
+    func labelColor(_ k: PlaceKind) -> PlatformColor {
         switch k {
         case .taxiway: .rgb(0x111111)
         case .cargo: cargoEdge
         case .terminal: terminalEdge
         default: label
         }
-    }
-}
-
-private extension UIColor {
-    static func rgb(_ hex: UInt32, alpha: CGFloat = 1) -> UIColor {
-        UIColor(red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
-                blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
     }
 }
 
@@ -429,7 +422,7 @@ final class LayoutMapController {
     func fitLayout() {
         guard let map = mapView, let rect = layoutBounds else { return }
         map.setUserTrackingMode(.none, animated: false)
-        map.setVisibleMapRect(rect, edgePadding: UIEdgeInsets(top: 80, left: 70, bottom: 120, right: 20), animated: true)
+        map.setVisibleMapRect(rect, edgePadding: PlatformEdgeInsets(top: 80, left: 70, bottom: 120, right: 20), animated: true)
     }
 
     func centre(lat: Double, lon: Double, atLeast zoom: Double? = nil) {
@@ -502,7 +495,7 @@ private final class SelectedAnnotation: NSObject, MKAnnotation {
 /// How a group of lines is drawn: a minimum width in points (thinner when zoomed out), a
 /// real width in metres where known, and dashes.
 private struct LineStyle {
-    var color: UIColor
+    var color: PlatformColor
     var minPt: CGFloat
     var widthM: Double?
     var dashM: [Double]?
@@ -511,7 +504,7 @@ private struct LineStyle {
     var fromZoom = 0.0
 }
 
-struct AirportLayoutMap: UIViewRepresentable {
+struct AirportLayoutMap {
     var airport: Airport
     var layout: AirportLayout?
     var route: Route?
@@ -523,9 +516,9 @@ struct AirportLayoutMap: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
-    func makeUIView(context: Context) -> MKMapView {
+    func makeMap(_ coordinator: Coordinator) -> MKMapView {
         let map = MKMapView()
-        map.delegate = context.coordinator
+        map.delegate = coordinator
         map.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .flat, emphasisStyle: .muted)
         map.pointOfInterestFilter = .excludingAll
         map.showsCompass = true
@@ -536,8 +529,7 @@ struct AirportLayoutMap: UIViewRepresentable {
         return map
     }
 
-    func updateUIView(_ map: MKMapView, context: Context) {
-        let c = context.coordinator
+    func updateMap(_ map: MKMapView, _ c: Coordinator) {
         c.parent = self
         controller.mapView = map
         map.showsUserLocation = showsUser
@@ -787,6 +779,19 @@ struct AirportLayoutMap: UIViewRepresentable {
     }
 }
 
+#if os(iOS)
+extension AirportLayoutMap: UIViewRepresentable {
+    func makeUIView(context: Context) -> MKMapView { makeMap(context.coordinator) }
+    func updateUIView(_ map: MKMapView, context: Context) { updateMap(map, context.coordinator) }
+}
+#else
+extension AirportLayoutMap: NSViewRepresentable {
+    func makeNSView(context: Context) -> MKMapView { makeMap(context.coordinator) }
+    func updateNSView(_ map: MKMapView, context: Context) { updateMap(map, context.coordinator) }
+}
+#endif
+
+#if os(iOS)
 /// A place's name on the map; a yellow sign for taxiway letters, a dot for gates.
 private final class LabelAnnotationView: MKAnnotationView {
     static let reuseID = "label"
@@ -808,7 +813,7 @@ private final class LabelAnnotationView: MKAnnotationView {
         addSubview(label)
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not used") }
 
     private func configure() {
         guard let place, let style else { return }
@@ -853,5 +858,84 @@ private final class HoldAnnotationView: MKAnnotationView {
         isAccessibilityElement = false
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not used") }
 }
+#else
+/// A place's name on the map; a yellow sign for taxiway letters, a dot for gates.
+private final class LabelAnnotationView: MKAnnotationView {
+    static let reuseID = "label"
+    private let label = NSTextField(labelWithString: "")
+    private let dot = NSView()
+
+    var style: LayoutStyle? { didSet { configure() } }
+    var place: Place? { didSet { configure() } }
+
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        collisionMode = .rectangle
+        canShowCallout = false
+        label.alignment = .center
+        label.drawsBackground = true
+        label.wantsLayer = true
+        label.layer?.cornerRadius = 4
+        label.layer?.masksToBounds = true
+        dot.wantsLayer = true
+        dot.layer?.cornerRadius = 4
+        addSubview(dot)
+        addSubview(label)
+    }
+
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not used") }
+
+    // A click anywhere on the label selects the place, rather than the text field taking it.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        frame.contains(point) ? self : nil
+    }
+
+    private func configure() {
+        guard let place, let style else { return }
+        let big = place.kind == .cargo || place.kind == .terminal || place.kind == .taxiway
+        label.stringValue = place.kind == .gate ? place.label : String(place.label.prefix(28))
+        label.font = .systemFont(ofSize: big ? 12 : 11, weight: big ? .bold : .medium)
+        label.textColor = style.labelColor(place.kind)
+        label.backgroundColor = place.kind == .taxiway ? style.taxiSign : style.labelHalo
+        let text = label.intrinsicContentSize
+        let size = CGSize(width: ceil(text.width) + 8, height: ceil(text.height) + 2)
+        let isGate = place.kind == .gate
+        dot.isHidden = !isGate
+        dot.layer?.backgroundColor = style.gate.cgColor
+        if isGate {
+            // The dot on the gate, its number to the right.
+            dot.frame = CGRect(x: 0, y: (size.height - 8) / 2, width: 8, height: 8)
+            label.frame = CGRect(x: 12, y: 0, width: size.width, height: size.height)
+            frame.size = CGSize(width: 12 + size.width, height: size.height)
+            centerOffset = CGPoint(x: (12 + size.width) / 2 - 4, y: 0)
+        } else {
+            label.frame = CGRect(origin: .zero, size: size)
+            frame.size = size
+            centerOffset = .zero
+        }
+        displayPriority = MKFeatureDisplayPriority(rawValue: 900 - Float(labelRank(place.kind)) * 100)
+        setAccessibilityLabel(place.title)
+        setAccessibilityElement(true)
+    }
+}
+
+private final class HoldAnnotationView: MKAnnotationView {
+    static let reuseID = "hold"
+    var color: PlatformColor = .red { didSet { layer?.backgroundColor = color.cgColor } }
+
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        frame.size = CGSize(width: 6, height: 6)
+        wantsLayer = true
+        layer?.cornerRadius = 3
+        layer?.backgroundColor = color.cgColor
+        displayPriority = .defaultLow
+        collisionMode = .circle
+        setAccessibilityElement(false)
+    }
+
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not used") }
+}
+#endif
