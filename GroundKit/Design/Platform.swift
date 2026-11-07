@@ -19,7 +19,9 @@ typealias PlatformEdgeInsets = NSEdgeInsets
 extension PlatformColor {
     /// An sRGB colour from 0xRRGGBB.
     static func rgb(_ hex: UInt32, alpha: CGFloat = 1) -> PlatformColor {
-        let r = CGFloat((hex >> 16) & 0xFF) / 255, g = CGFloat((hex >> 8) & 0xFF) / 255, b = CGFloat(hex & 0xFF) / 255
+        let r = CGFloat((hex >> 16) & 0xFF) / 255
+        let g = CGFloat((hex >> 8) & 0xFF) / 255
+        let b = CGFloat(hex & 0xFF) / 255
         #if canImport(UIKit)
         return UIColor(red: r, green: g, blue: b, alpha: alpha)
         #else

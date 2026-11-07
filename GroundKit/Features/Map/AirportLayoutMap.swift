@@ -813,7 +813,7 @@ private final class LabelAnnotationView: MKAnnotationView {
         addSubview(label)
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not used") }
 
     private func configure() {
         guard let place, let style else { return }
@@ -858,7 +858,7 @@ private final class HoldAnnotationView: MKAnnotationView {
         isAccessibilityElement = false
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not used") }
 }
 #else
 /// A place's name on the map; a yellow sign for taxiway letters, a dot for gates.
@@ -885,7 +885,7 @@ private final class LabelAnnotationView: MKAnnotationView {
         addSubview(label)
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not used") }
 
     // A click anywhere on the label selects the place, rather than the text field taking it.
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -936,6 +936,6 @@ private final class HoldAnnotationView: MKAnnotationView {
         setAccessibilityElement(false)
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not used") }
 }
 #endif
