@@ -130,10 +130,10 @@ The builds are not signed with an Apple team. `GroundKit-macOS.zip` is signed to
 
 ### Homebrew
 
-After the release is published, the workflow sets the version and sha256 in `Casks/groundkit.rb` in [watanaberyunosuke/homebrew-tap](https://github.com/watanaberyunosuke/homebrew-tap) and pushes it, so `brew upgrade` picks up the new version (install steps are under Mac). It needs a `HOMEBREW_TAP_TOKEN` secret, set up once:
+After the release is published, the workflow sets the version and sha256 in `Casks/groundkit.rb` in [watanaberyunosuke/homebrew-tap](https://github.com/watanaberyunosuke/homebrew-tap) and pushes it, so `brew upgrade` picks up the new version (install steps are under Mac). It needs a `GROUNDKIT_HOMEBREW_TAP` secret, set up once:
 
 1. GitHub > Settings > Developer settings > Fine-grained tokens > Generate new token. Repository access: only `watanaberyunosuke/homebrew-tap`. Permissions: Contents, read and write. Choose an expiry and note it.
-2. In this repository: Settings > Secrets and variables > Actions > New repository secret, named `HOMEBREW_TAP_TOKEN`, with the token as its value. Or from a terminal: `gh secret set HOMEBREW_TAP_TOKEN --repo watanaberyunosuke/groundkit-ios`.
+2. In this repository: Settings > Secrets and variables > Actions > New repository secret, named `GROUNDKIT_HOMEBREW_TAP`, with the token as its value. Or from a terminal: `gh secret set GROUNDKIT_HOMEBREW_TAP --repo watanaberyunosuke/groundkit-ios`.
 
 Without the secret (or once the token expires) the step is skipped with a warning and the release still publishes; update `version` and `sha256` in the cask by hand (`shasum -a 256 GroundKit-macOS.zip`).
 
