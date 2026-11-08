@@ -9,19 +9,23 @@ struct SettingsView: View {
     @AppStorage("appearance") private var appearance = Appearance.auto
     @AppStorage("age") private var age = 0
     @State private var urlText = ""
+    @State private var showSignIn = false
 
     var body: some View {
         @Bindable var store = store
         NavigationStack {
             Form {
-                AccountSection()
+                AccountSection(showSignIn: $showSignIn)
                 Section("Airport") {
                     Picker("Airport", selection: Binding(get: { store.icao }, set: { store.select($0) })) {
                         ForEach(store.airports.sorted { $0.iata < $1.iata }) { Text("\($0.iata)  \($0.name)").tag($0.icao) }
                     }
                 }
                 Section {
+                    #if os(iOS)
+                    // Glove mode is for touch screens; the Mac doesn't offer it.
                     Toggle("Glove mode (larger text and buttons)", isOn: $gloveMode)
+                    #endif
                     Toggle("Keep screen on", isOn: $keepAwake)
                 } header: {
                     Text("On the ramp")
@@ -71,11 +75,9 @@ struct SettingsView: View {
                         }
                     }
                 }
-                .task { await health.checkForNewTypes() }
                 Section {
                     TextField("API base URL", text: $urlText)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
+                        .urlEntry()
                         .autocorrectionDisabled()
                         .onSubmit(applyURL)
                     Button("Use default") {
@@ -93,8 +95,12 @@ struct SettingsView: View {
                     Text("Optional. It unlocks nothing in the app.")
                 }
             }
+            .formStyle(.grouped)
+            // On the form, not a section: a section passes its modifiers to every row.
+            .sheet(isPresented: $showSignIn) { SignInView() }
+            .task { await health.checkForNewTypes() }
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {

@@ -192,7 +192,7 @@ struct MapCard: View {
         }
         .onAppear { position = MapZoom.terminal.position(center) }
         .onChange(of: store.icao) { position = MapZoom.terminal.position(center) }
-        .fullScreenCover(isPresented: $showFull) { MapScreen(mode: .airspace) }
+        .coverScreen(isPresented: $showFull) { MapScreen(mode: .airspace) }
     }
 
     private var center: CLLocationCoordinate2D { .init(latitude: store.airport.lat, longitude: store.airport.lon) }
@@ -236,7 +236,7 @@ struct MapScreen: View {
                 }
             }
             .navigationTitle("\(store.airport.iata) \(mode == .airport ? "layout" : "airspace")")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
                 ToolbarItem(placement: .principal) {

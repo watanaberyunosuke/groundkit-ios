@@ -39,16 +39,16 @@ struct NowView: View {
                 .padding()
             }
             .navigationTitle(store.airport.name)
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .rampToolbar()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .barTrailing) {
                     Button("Settings", systemImage: "gearshape") { showSettings = true }
                 }
             }
             .refreshable { await store.refresh(force: true) }
             .sheet(isPresented: $showSettings) { SettingsView() }
-            .fullScreenCover(isPresented: Binding(get: { board != nil }, set: { if !$0 { board = nil } })) {
+            .coverScreen(isPresented: Binding(get: { board != nil }, set: { if !$0 { board = nil } })) {
                 BoardView(fixedDir: board ?? .inbound)
             }
             // "Start turnaround" from an enlarged board switches tab: close the board with it.

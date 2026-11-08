@@ -25,7 +25,13 @@ final class LocationTracker: NSObject, CLLocationManagerDelegate {
         manager.distanceFilter = 5
     }
 
-    var isAllowed: Bool { authorization == .authorizedWhenInUse || authorization == .authorizedAlways }
+    var isAllowed: Bool {
+        #if os(iOS)
+        authorization == .authorizedWhenInUse || authorization == .authorizedAlways
+        #else
+        authorization == .authorizedAlways // the Mac has no "while using" level
+        #endif
+    }
     var isDenied: Bool { authorization == .denied || authorization == .restricted }
 
     /// Asks for permission the first time; starts updates once allowed.

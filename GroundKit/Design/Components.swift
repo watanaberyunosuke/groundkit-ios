@@ -317,16 +317,16 @@ private struct RampToolbar: ViewModifier {
 
     func body(content: Content) -> some View {
         content.toolbar {
-            ToolbarItem(placement: .topBarLeading) { AirportMenu() }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .barLeading) { AirportMenu() }
+            ToolbarItem(placement: .barTrailing) {
                 if store.isRefreshing { ProgressView() }
             }
             // The map from every tab: on the ground it's the airport layout you need.
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .barTrailing) {
                 Button("Map", systemImage: "map") { showMap = true }
             }
         }
-        .fullScreenCover(isPresented: $showMap) { MapScreen(mode: .airport) }
+        .coverScreen(isPresented: $showMap) { MapScreen(mode: .airport) }
     }
 }
 

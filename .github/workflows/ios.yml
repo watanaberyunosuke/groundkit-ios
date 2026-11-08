@@ -1,4 +1,4 @@
-name: iOS tests
+name: iOS and Mac tests
 
 # Builds the app and runs the Swift Testing suite on an iPhone simulator. Mirrors the
 # Android repo's workflow, without its on/off variable: macOS runners cost nothing on a
@@ -58,9 +58,22 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             -quiet
 
+      # The Mac app, signed to run locally (no team on the runner).
+      - name: Test (Mac)
+        run: |
+          xcodebuild test \
+            -project GroundKit.xcodeproj \
+            -scheme GroundKit \
+            -destination "platform=macOS" \
+            -resultBundlePath TestResults-macOS.xcresult \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -quiet
+
       - name: Keep the test results
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: TestResults
-          path: TestResults.xcresult
+          path: |
+            TestResults.xcresult
+            TestResults-macOS.xcresult

@@ -1,10 +1,12 @@
 import AuthenticationServices
 import SwiftUI
 
-/// The Account section at the top of Settings.
+/// The Account section at the top of Settings. The sign-in sheet is presented by Settings:
+/// a modifier on a Form section applies to each of its rows, so a sheet here would be
+/// presented once per row and closed when any of those rows redraws.
 struct AccountSection: View {
     @Environment(AccountService.self) private var account
-    @State private var showSignIn = false
+    @Binding var showSignIn: Bool
 
     var body: some View {
         if account.isConfigured {
@@ -28,7 +30,6 @@ struct AccountSection: View {
             } footer: {
                 Text("Optional. Signed in, your airport, glove mode, keep screen on, appearance and wind limits sync with GroundKit on Android and the web. Age and the data source stay on this device.")
             }
-            .sheet(isPresented: $showSignIn) { SignInView() }
         }
     }
 
@@ -86,8 +87,7 @@ struct SignInView: View {
                     }
                     TextField("Email", text: $email)
                         .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
+                        .emailEntry()
                         .autocorrectionDisabled()
                     SecureField("Password", text: $password)
                         .textContentType(mode == .create ? .newPassword : .password)
@@ -121,8 +121,9 @@ struct SignInView: View {
                     Section { Label(notice, systemImage: "envelope.fill") }
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle(mode == .create ? "Create account" : "Sign in")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
@@ -230,8 +231,9 @@ struct AccountView: View {
                 }
             }
         }
+        .formStyle(.grouped)
         .navigationTitle("Account")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitle()
         .disabled(busy)
         .onAppear { name = account.displayName ?? "" }
         .confirmationDialog("Delete your GroundKit account?", isPresented: $confirmDelete, titleVisibility: .visible) {
