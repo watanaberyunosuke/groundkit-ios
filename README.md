@@ -106,6 +106,17 @@ GitHub Actions runs both on every pull request and push to `main` (`.github/work
 
 Swift Testing covers the board logic (placement, ETA, delay, on-stand lateness, predicted flights, landings remembered across fixes, coverage gaps), the ramp advisories (thunderstorms, storm clouds, TAF validity, wind limits, heat index, wind chill, ice, low visibility, stale weather, NOTAM relevance), METAR wording, decoding the API's JSON, sunrise and sunset (HKG and LHR, polar night), the fatigue, rest, weekly-hours, heat-strain and break rules, the OpenStreetMap layout parser, place search and road routes (including one-way roads), and the account sync (settings merge, PKCE, session and error parsing). The same cases as the Android app's tests.
 
+## Releases
+
+Pushing a version tag builds both apps and attaches them to a GitHub Release (`.github/workflows/release.yml`). The tag sets the version and the run number sets the build number.
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+The builds are not signed with an Apple team. `GroundKit-macOS.zip` is signed to run locally, so macOS asks once before opening it (System Settings > Privacy & Security > Open Anyway). `GroundKit-iOS-unsigned.ipa` must be re-signed (Sideloadly, AltStore) before it installs. Running the workflow by hand from the Actions tab builds both without publishing a release.
+
 ## Layout
 
 ```
