@@ -70,6 +70,15 @@ The contract, the Supabase setup and known gaps are in the aviation repo's [docs
 
 The same target builds a native macOS app (not Mac Catalyst): choose *My Mac* as the run destination. iOS-only APIs are wrapped in `Design/Platform.swift`; the airport map has an AppKit version of its map view.
 
+To install the released app with [Homebrew](https://brew.sh):
+
+```bash
+brew trust watanaberyunosuke/tap
+brew install --cask watanaberyunosuke/tap/groundkit
+```
+
+`brew trust` is needed once, because Homebrew loads casks from personal taps only after they are trusted. The app is not notarised, so on first launch open System Settings > Privacy & Security and choose Open Anyway. Update with `brew upgrade --cask groundkit`; remove it, with its data, with `brew uninstall --zap --cask groundkit`. The zip is also on each [GitHub Release](https://github.com/watanaberyunosuke/groundkit-ios/releases).
+
 - One window, with the tabs in a sidebar. View menu: the tabs (Command-1 to 4) and Refresh (Command-R). Settings opens in its own window (Command-comma). The map and the enlarged boards open as large sheets.
 - No glove mode: it is for touch screens. The setting still syncs, so the phone keeps it.
 - No Health on a Mac: the Shift tab keeps time on shift, breaks, water, rest and weekly hours, without steps, heart rate, sleep or noise.
@@ -118,6 +127,15 @@ git push origin v1.1.0
 ```
 
 The builds are not signed with an Apple team. `GroundKit-macOS.zip` is signed to run locally, so macOS asks once before opening it (System Settings > Privacy & Security > Open Anyway). `GroundKit-iOS-unsigned.ipa` must be re-signed (Sideloadly, AltStore) before it installs. Running the workflow by hand from the Actions tab builds both without publishing a release.
+
+### Homebrew
+
+After the release is published, the workflow sets the version and sha256 in `Casks/groundkit.rb` in [watanaberyunosuke/homebrew-tap](https://github.com/watanaberyunosuke/homebrew-tap) and pushes it, so `brew upgrade` picks up the new version (install steps are under Mac). It needs a `HOMEBREW_TAP_TOKEN` secret, set up once:
+
+1. GitHub > Settings > Developer settings > Fine-grained tokens > Generate new token. Repository access: only `watanaberyunosuke/homebrew-tap`. Permissions: Contents, read and write. Choose an expiry and note it.
+2. In this repository: Settings > Secrets and variables > Actions > New repository secret, named `HOMEBREW_TAP_TOKEN`, with the token as its value. Or from a terminal: `gh secret set HOMEBREW_TAP_TOKEN --repo watanaberyunosuke/groundkit-ios`.
+
+Without the secret (or once the token expires) the step is skipped with a warning and the release still publishes; update `version` and `sha256` in the cask by hand (`shasum -a 256 GroundKit-macOS.zip`).
 
 ## Layout
 
