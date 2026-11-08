@@ -111,16 +111,16 @@ jobs:
           fi
 
       # Points the Homebrew cask (watanaberyunosuke/homebrew-tap) at the new Mac zip.
-      # Needs a HOMEBREW_TAP_TOKEN secret: a fine-grained token with Contents read and
+      # Needs a GROUNDKIT_HOMEBREW_TAP secret: a fine-grained token with Contents read and
       # write on the tap repository only. Without it the step is skipped.
       - name: Update the Homebrew tap
         if: github.ref_type == 'tag'
         env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ secrets.GROUNDKIT_HOMEBREW_TAP }}
           TAG: ${{ github.ref_name }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::warning::HOMEBREW_TAP_TOKEN is not set; the Homebrew tap was not updated"
+            echo "::warning::GROUNDKIT_HOMEBREW_TAP is not set; the Homebrew tap was not updated"
             exit 0
           fi
           version="${TAG#v}"
