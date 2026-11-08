@@ -4,6 +4,8 @@ name: Release
 # is pushed (for example v1.2.0). The builds are not signed with an Apple team:
 #   - GroundKit-iOS-unsigned.ipa must be re-signed before it installs (Sideloadly, AltStore).
 #   - GroundKit-macOS.zip is signed to run locally; macOS asks once before opening it.
+# It then updates the Homebrew cask, so `brew install --cask watanaberyunosuke/tap/groundkit`
+# installs the new version.
 # Run it by hand from the Actions tab to build without publishing a release.
 on:
   push:
@@ -106,3 +108,33 @@ jobs:
               --notes-file notes.md \
               --generate-notes
           fi
+
+      # Points the Homebrew cask (watanaberyunosuke/homebrew-tap) at the new Mac zip.
+      # Needs a HOMEBREW_TAP_TOKEN secret: a fine-grained token with Contents read and
+      # write on the tap repository only. Without it the step is skipped.
+      - name: Update the Homebrew tap
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::HOMEBREW_TAP_TOKEN is not set; the Homebrew tap was not updated"
+            exit 0
+          fi
+          version="${TAG#v}"
+          sha=$(shasum -a 256 dist/GroundKit-macOS.zip | cut -d' ' -f1)
+          git clone -q "https://x-access-token:${GH_TOKEN}@github.com/watanaberyunosuke/homebrew-tap.git" tap
+          cd tap
+          sed -i '' -E \
+            -e "s/^  version \".*\"/  version \"${version}\"/" \
+            -e "s/^  sha256 \".*\"/  sha256 \"${sha}\"/" \
+            Casks/groundkit.rb
+          if git diff --quiet; then
+            echo "The cask already points at ${version}"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -qam "chore(groundkit): update to ${version}"
+          git push -q origin HEAD:main

@@ -117,6 +117,15 @@ git push origin v1.1.0
 
 The builds are not signed with an Apple team. `GroundKit-macOS.zip` is signed to run locally, so macOS asks once before opening it (System Settings > Privacy & Security > Open Anyway). `GroundKit-iOS-unsigned.ipa` must be re-signed (Sideloadly, AltStore) before it installs. Running the workflow by hand from the Actions tab builds both without publishing a release.
 
+The workflow then updates the Homebrew cask in [watanaberyunosuke/homebrew-tap](https://github.com/watanaberyunosuke/homebrew-tap), so the Mac app installs with:
+
+```bash
+brew trust watanaberyunosuke/tap
+brew install --cask watanaberyunosuke/tap/groundkit
+```
+
+Homebrew loads casks from personal taps only once they are trusted, which is the first command. The macOS first-launch prompt still applies. The update needs a `HOMEBREW_TAP_TOKEN` repository secret: a fine-grained token with Contents read and write on the tap repository only. Without it the step is skipped with a warning.
+
 ## Layout
 
 ```
