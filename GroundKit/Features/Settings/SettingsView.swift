@@ -89,6 +89,11 @@ struct SettingsView: View {
                 } footer: {
                     Text("Weather, NOTAMs and flight history from the aviation data pipeline (MotherDuck, refreshed hourly). Live positions from adsb.lol (ODbL) or the OpenSky Network. Not an official source: advisory only.")
                 }
+                Section {
+                    Link("Support GroundKit on Ko-fi", destination: URL(string: "https://ko-fi.com/harrybwatson")!)
+                } footer: {
+                    Text("Optional. It unlocks nothing in the app.")
+                }
             }
             .formStyle(.grouped)
             // On the form, not a section: a section passes its modifiers to every row.
