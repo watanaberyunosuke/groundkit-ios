@@ -74,6 +74,7 @@ struct SettingsView: View {
                             Task { await health.requestAccess() }
                         }
                     }
+                    if let error = health.lastError { Text(error).font(.footnote).foregroundStyle(.secondary) }
                 }
                 Section {
                     TextField("API base URL", text: $urlText)
