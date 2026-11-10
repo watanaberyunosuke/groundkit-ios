@@ -142,6 +142,7 @@ struct ShiftView: View {
                     }
                 }
                 .buttonStyle(BigButtonStyle(tint: .pink))
+                if let error = health.lastError { Text(error).font(.footnote).foregroundStyle(.secondary) }
             }
         } else {
             TileGrid(tiles: [
