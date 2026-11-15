@@ -275,7 +275,9 @@ nonisolated struct BoardBuilder: Sendable {
             return PlacedAircraft(
                 aircraft: a, kind: kind, other: seen?.otherIata,
                 flightIata: a.callsign.flatMap(history.flightIata),
-                airline: a.callsign.flatMap(history.airline),
+                // This airport's history first, then the API's designator lookup, which also
+                // names traffic that never uses the airport.
+                airline: a.callsign.flatMap(history.airline) ?? a.airlineName,
                 distNm: km / Geo.kmPerNm,
                 etaMin: kind == .inbound ? legMin : nil,
                 usual: seen.map { LocalTime.hhmm(minutes: $0.usualMin) },

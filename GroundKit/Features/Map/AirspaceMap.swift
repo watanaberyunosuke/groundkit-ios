@@ -36,6 +36,8 @@ struct AirspaceMap: View {
     var airportView = false
     /// Your position, once location is allowed.
     var showsUser = false
+    /// The aircraft whose card is open, ringed on the map.
+    var selectedID: String? = nil
     var onSelect: (PlacedAircraft) -> Void = { _ in }
 
     var body: some View {
@@ -59,7 +61,8 @@ struct AirspaceMap: View {
             ForEach(store.placed.filter { showGround || $0.kind != .ground }.sorted { $0.kind.drawOrder < $1.kind.drawOrder }) { p in
                 Annotation("", coordinate: CLLocationCoordinate2D(latitude: p.aircraft.lat, longitude: p.aircraft.lon),
                            anchor: .center) {
-                    AircraftMarker(placed: p, showLabel: interactive && (p.kind != .ground || airportView))
+                    AircraftMarker(placed: p, showLabel: interactive && (p.kind != .ground || airportView),
+                                   selected: p.id == selectedID)
                         .onTapGesture { onSelect(p) }
                 }
             }
@@ -80,6 +83,18 @@ struct AirspaceMap: View {
     }
 }
 
+extension PlacedAircraft {
+    /// Delay status for the airport's own flights, else ground or background traffic; shared
+    /// by the map marker and the flight card so they agree.
+    var markerColor: Color {
+        switch kind {
+        case .inbound, .outbound: rag == .unknown ? .blue : rag.color
+        case .ground: .brown
+        case .other: .gray.opacity(0.7)
+        }
+    }
+}
+
 private extension PlacedAircraft.Kind {
     /// Background traffic first, so the airport's own flights draw on top.
     var drawOrder: Int {
@@ -95,6 +110,7 @@ private extension PlacedAircraft.Kind {
 struct AircraftMarker: View {
     var placed: PlacedAircraft
     var showLabel: Bool
+    var selected = false
 
     var body: some View {
         let p = placed
@@ -107,6 +123,9 @@ struct AircraftMarker: View {
                 .rotationEffect(.degrees(p.aircraft.trackDeg ?? 0))
                 .foregroundStyle(color)
                 .shadow(color: .black.opacity(0.5), radius: 1)
+                .background {
+                    if selected { Circle().stroke(.primary, lineWidth: 1.5).frame(width: 26, height: 26) }
+                }
             if labelled {
                 Text(p.label)
                     .font(.caption2.weight(.bold))
@@ -118,16 +137,10 @@ struct AircraftMarker: View {
         .contentShape(.rect)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibility)
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 
-    private var color: Color {
-        switch placed.kind {
-        case .inbound, .outbound: placed.rag == .unknown ? .blue : placed.rag.color
-        case .ground: .brown
-        case .other: .gray.opacity(0.7)
-        }
-    }
+    private var color: Color { placed.markerColor }
 
     private var accessibility: String {
         let p = placed
@@ -221,7 +234,9 @@ struct MapScreen: View {
     @State private var mode: MapMode
     @State private var zoom = MapZoom.terminal
     @State private var position: MapCameraPosition = .automatic
-    @State private var selected: BoardEntry?
+    /// The aircraft whose card is shown over the map, by id, so the card follows live updates.
+    @State private var selectedID: String?
+    @State private var detail: BoardEntry?
 
     init(mode: MapMode = .airport) {
         _mode = State(initialValue: mode)
@@ -254,8 +269,19 @@ struct MapScreen: View {
     }
 
     private var airspace: some View {
-        AirspaceMap(position: $position, interactive: true, airportView: zoom == .airport, showsUser: location.isAllowed) {
-            selected = store.entry(for: $0)
+        AirspaceMap(position: $position, interactive: true, airportView: zoom == .airport,
+                    showsUser: location.isAllowed, selectedID: selectedID) { p in
+            withAnimation(.snappy) { selectedID = p.id == selectedID ? nil : p.id }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let p = store.placed.first(where: { $0.id == selectedID }) {
+                FlightCard(placed: p, iata: store.airport.iata, timeZone: store.timeZone,
+                           onDetails: { detail = store.entry(for: p) },
+                           onClose: { withAnimation(.snappy) { selectedID = nil } })
+                    .frame(maxWidth: 320)
+                    .padding(12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .ignoresSafeArea(edges: .bottom)
         .safeAreaInset(edge: .top) {
@@ -270,7 +296,8 @@ struct MapScreen: View {
         .safeAreaInset(edge: .bottom) { legend }
         .onAppear { position = zoom.position(center) }
         .onChange(of: zoom) { withAnimation { position = zoom.position(center) } }
-        .sheet(item: $selected) { FlightDetailView(entry: $0) }
+        .onChange(of: store.icao) { selectedID = nil }
+        .sheet(item: $detail) { FlightDetailView(entry: $0) }
     }
 
     private var center: CLLocationCoordinate2D { .init(latitude: store.airport.lat, longitude: store.airport.lon) }
@@ -300,5 +327,89 @@ struct MapScreen: View {
 
     private func legendItem(_ text: String, _ color: Color) -> some View {
         Label { Text(text) } icon: { Image(systemName: "location.north.fill").foregroundStyle(color) }
+    }
+}
+
+/// The aircraft tapped on the airspace map, laid over it as on the dashboard: who it is,
+/// where it is going, how late, and its live position. Follows the live feed while open.
+struct FlightCard: View {
+    var placed: PlacedAircraft
+    var iata: String
+    var timeZone: TimeZone
+    var onDetails: () -> Void
+    var onClose: () -> Void
+
+    var body: some View {
+        let p = placed
+        let a = p.aircraft
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(p.label).font(.headline)
+                    if let airline = p.airline { Text(airline).font(.subheadline) }
+                    if let callsign = a.callsign, callsign != p.label {
+                        Text(callsign).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill").font(.title3).foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Hide flight")
+            }
+            HStack(spacing: 6) {
+                Circle().fill(p.markerColor).frame(width: 8, height: 8)
+                Text(route).fontWeight(.semibold)
+                if tracked { Text("· \(Rag.text(delay: p.delayMin))").foregroundStyle(.secondary) }
+            }
+            .font(.subheadline)
+            if a.isFreighter == true { FreighterTag() }
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 3) {
+                row("Distance", "\(Int(p.distNm.rounded())) NM")
+                row("Altitude", a.onGround ? "Ground" : "\(Int(a.altFt ?? 0).formatted()) ft")
+                row("Speed", a.speedKt.map { "\(Int($0)) kt" } ?? "–")
+                if let vs = a.vrateFpm, !a.onGround, Int(vs) != 0 {
+                    row("Vertical", "\(vs > 0 ? "+" : "")\(Int(vs).formatted()) ft/min")
+                }
+                if let track = a.trackDeg {
+                    row("Heading", String(format: "%03d°", Int(track.rounded()) % 360))
+                }
+                if let usual = p.usual { row(p.kind == .inbound ? "Usual arrival" : "Usual departure", usual) }
+                if let at = p.eventAt, !a.onGround {
+                    if p.kind == .inbound {
+                        row("ETA", "\(LocalTime.hhmm(at, timeZone)) (\(Int((p.etaMin ?? 0).rounded())) min)")
+                    } else if p.kind == .outbound {
+                        row("Took off", "~\(LocalTime.hhmm(at, timeZone))")
+                    }
+                }
+            }
+            .font(.subheadline)
+            Button("Flight details", systemImage: "info.circle", action: onDetails)
+                .font(.subheadline.weight(.semibold))
+        }
+        .padding(12)
+        .background(.regularMaterial, in: .rect(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var tracked: Bool { placed.kind == .inbound || placed.kind == .outbound }
+
+    private var route: String {
+        let other = placed.other ?? "?"
+        switch placed.kind {
+        case .inbound: return "\(other) → \(iata)"
+        case .outbound: return "\(iata) → \(other)"
+        case .ground: return "On the ground at \(iata)"
+        case .other: return "Other traffic"
+        }
+    }
+
+    private func row(_ label: String, _ value: String) -> some View {
+        GridRow {
+            Text(label).foregroundStyle(.secondary)
+            Text(value).fontWeight(.semibold).monospacedDigit()
+        }
     }
 }
