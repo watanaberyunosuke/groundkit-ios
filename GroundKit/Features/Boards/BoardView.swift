@@ -194,6 +194,9 @@ struct FlightDetailView: View {
                 }
                 Section("Identifiers") {
                     LabeledContent("Callsign", value: entry.callsign)
+                    if let reg = entry.aircraft?.registration { LabeledContent("Registration", value: reg) }
+                    if let type = entry.aircraft?.typeCode { LabeledContent("Type", value: type) }
+                    if let squawk = entry.aircraft?.squawk { LabeledContent("Squawk", value: squawk) }
                     if let hex = entry.aircraft?.icao24 { LabeledContent("Transponder (hex)", value: hex.uppercased()) }
                 }
                 Section {

@@ -166,6 +166,29 @@ struct BoardBuilderTests {
         #expect(airline["VHABC"] == .some(nil))        // registration: no carrier
     }
 
+    @Test func aDroppedCallsignKeepsTheLastOneSeen() {
+        let b = builder([history("CPA710", .outbound, usual: "12:50")])
+        var memory = DirectionMemory()
+        var first = aircraft("CPA710", kmNorth: 100, track: 0)
+        first.airlineName = "Cathay Pacific"
+        _ = b.place([first], now: now, directions: &memory)
+        var dropped = first
+        dropped.callsign = nil
+        dropped.airlineName = nil
+        let p = b.place([dropped], now: now, directions: &memory)[0]
+        #expect(p.aircraft.callsign == "CPA710")
+        #expect(p.airline == "Cathay Pacific")
+        #expect(p.callsignRemembered)
+        #expect(p.kind == .outbound)
+        // Never seen with a callsign: nothing to remember.
+        var anonymous = aircraft("X", kmNorth: 100)
+        anonymous.icao24 = "781e0a"
+        anonymous.callsign = nil
+        let q = b.place([anonymous], now: now, directions: &memory)[0]
+        #expect(q.aircraft.callsign == nil)
+        #expect(!q.callsignRemembered)
+    }
+
     @Test func regularFlightsArePredicted() {
         let b = builder([
             history("JST500", .inbound, usual: "15:00", days: 8, other: "OOL"),

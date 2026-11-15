@@ -80,6 +80,9 @@ nonisolated struct PlacedAircraft: Sendable, Identifiable, Hashable {
     /// Estimated arrival (inbound) or take-off (outbound).
     var eventAt: Date?
 
+    /// The feed dropped the callsign in this fix; `aircraft.callsign` is the last one seen.
+    var callsignRemembered = false
+
     var label: String { flightIata ?? aircraft.callsign ?? aircraft.icao24 ?? "Unknown" }
     var id: String { aircraft.icao24 ?? label }
 }
@@ -110,7 +113,29 @@ nonisolated struct BoardLive: Sendable, Hashable {
 /// airport, and a departure stays outbound. The API cannot do this, as it keeps nothing
 /// between calls.
 nonisolated struct DirectionMemory: Sendable {
+    struct Identity: Sendable, Hashable {
+        var callsign: String
+        var airlineName: String?
+    }
+
     private(set) var byAircraft: [String: PlacedAircraft.Kind] = [:]
+    /// The last callsign and carrier seen per aircraft, for fixes where the feed drops them.
+    private(set) var identities: [String: Identity] = [:]
+
+    /// The fix with its callsign and carrier filled from earlier fixes when the feed dropped
+    /// them, and whether it was; remembers them when present.
+    mutating func identify(_ fix: LiveAircraft) -> (LiveAircraft, remembered: Bool) {
+        guard let id = fix.icao24 else { return (fix, false) }
+        if let callsign = fix.callsign {
+            identities[id] = Identity(callsign: callsign, airlineName: fix.airlineName)
+            return (fix, false)
+        }
+        guard let known = identities[id] else { return (fix, false) }
+        var a = fix
+        a.callsign = known.callsign
+        a.airlineName = fix.airlineName ?? known.airlineName
+        return (a, true)
+    }
 
     subscript(icao24: String) -> PlacedAircraft.Kind? { byAircraft[icao24] }
 
@@ -222,7 +247,8 @@ nonisolated struct BoardBuilder: Sendable {
     /// Direction comes from the API (`dir`, for this fix) or, without it, the same rules
     /// here; an airborne aircraft then keeps its direction from earlier fixes until it lands.
     func place(_ aircraft: [LiveAircraft], now: Date, directions: inout DirectionMemory) -> [PlacedAircraft] {
-        aircraft.map { a in
+        aircraft.map { fix in
+            let (a, remembered) = directions.identify(fix)
             let km = Geo.distKm(a.lat, a.lon, lat, lon)
             let h = a.callsign.flatMap { history[$0] }
             // Angle between the aircraft's track and the bearing to the airport: 0 = heading
@@ -281,7 +307,7 @@ nonisolated struct BoardBuilder: Sendable {
                 distNm: km / Geo.kmPerNm,
                 etaMin: kind == .inbound ? legMin : nil,
                 usual: seen.map { LocalTime.hhmm(minutes: $0.usualMin) },
-                delayMin: delay, rag: Rag(delay: delay), eventAt: at)
+                delayMin: delay, rag: Rag(delay: delay), eventAt: at, callsignRemembered: remembered)
         }
     }
 

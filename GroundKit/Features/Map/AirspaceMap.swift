@@ -350,6 +350,11 @@ struct FlightCard: View {
                     if let callsign = a.callsign, callsign != p.label {
                         Text(callsign).font(.subheadline).foregroundStyle(.secondary)
                     }
+                    if a.callsign == nil {
+                        Text("No callsign broadcast").font(.subheadline).foregroundStyle(.secondary)
+                    } else if p.callsignRemembered {
+                        Text("Callsign last seen; not in this update").font(.footnote).foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 Button(action: onClose) {
@@ -366,6 +371,8 @@ struct FlightCard: View {
             .font(.subheadline)
             if a.isFreighter == true { FreighterTag() }
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 3) {
+                if let reg = a.registration { row("Registration", reg) }
+                if let type = a.typeCode { row("Type", type) }
                 row("Distance", "\(Int(p.distNm.rounded())) NM")
                 row("Altitude", a.onGround ? "Ground" : "\(Int(a.altFt ?? 0).formatted()) ft")
                 row("Speed", a.speedKt.map { "\(Int($0)) kt" } ?? "–")
@@ -383,6 +390,8 @@ struct FlightCard: View {
                         row("Took off", "~\(LocalTime.hhmm(at, timeZone))")
                     }
                 }
+                if let squawk = a.squawk { row("Squawk", squawk) }
+                if let hex = a.icao24 { row("Transponder", hex.uppercased()) }
             }
             .font(.subheadline)
             Button("Flight details", systemImage: "info.circle", action: onDetails)
