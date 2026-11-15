@@ -151,6 +151,44 @@ struct BoardBuilderTests {
         #expect(Dictionary(uniqueKeysWithValues: live.map { ($0.callsign, $0.freighter) }) == ["GTI8": true, "QFA1": false])
     }
 
+    @Test func carrierFromHistoryElseTheFeed() throws {
+        var qantas = history("QFA1", .inbound, usual: "15:30")
+        qantas.airlineName = "Qantas"
+        let b = builder([qantas])
+        var known = aircraft("QFA1", kmNorth: 100)
+        known.airlineName = "Qantas Airways"
+        var passing = aircraft("QTR8082", kmNorth: 300, track: 0)
+        passing.airlineName = "Qatar Airways"
+        let placed = b.place([known, passing, aircraft("VHABC", kmNorth: 50)], now: now)
+        let airline = Dictionary(uniqueKeysWithValues: placed.map { ($0.label, $0.airline) })
+        #expect(airline["QFA1"] == "Qantas")          // this airport's history wins
+        #expect(airline["QTR8082"] == "Qatar Airways") // traffic passing through, from the API
+        #expect(airline["VHABC"] == .some(nil))        // registration: no carrier
+    }
+
+    @Test func aDroppedCallsignKeepsTheLastOneSeen() {
+        let b = builder([history("CPA710", .outbound, usual: "12:50")])
+        var memory = DirectionMemory()
+        var first = aircraft("CPA710", kmNorth: 100, track: 0)
+        first.airlineName = "Cathay Pacific"
+        _ = b.place([first], now: now, directions: &memory)
+        var dropped = first
+        dropped.callsign = nil
+        dropped.airlineName = nil
+        let p = b.place([dropped], now: now, directions: &memory)[0]
+        #expect(p.aircraft.callsign == "CPA710")
+        #expect(p.airline == "Cathay Pacific")
+        #expect(p.callsignRemembered)
+        #expect(p.kind == .outbound)
+        // Never seen with a callsign: nothing to remember.
+        var anonymous = aircraft("X", kmNorth: 100)
+        anonymous.icao24 = "781e0a"
+        anonymous.callsign = nil
+        let q = b.place([anonymous], now: now, directions: &memory)[0]
+        #expect(q.aircraft.callsign == nil)
+        #expect(!q.callsignRemembered)
+    }
+
     @Test func regularFlightsArePredicted() {
         let b = builder([
             history("JST500", .inbound, usual: "15:00", days: 8, other: "OOL"),

@@ -177,6 +177,15 @@ nonisolated struct LiveAircraft: Codable, Sendable, Hashable {
     var dir: String? = nil
     /// The API's is_freighter tag; nil if it sent none.
     var isFreighter: Bool? = nil
+    /// The carrier, from the callsign's ICAO designator; nil for registrations, unlisted
+    /// designators and older API versions.
+    var airlineName: String? = nil
+    /// From adsb.lol's aircraft database by transponder address, so known without a
+    /// callsign; nil where the feed has none.
+    var registration: String? = nil
+    /// ICAO aircraft type designator (A21N, B77W).
+    var typeCode: String? = nil
+    var squawk: String? = nil
 }
 
 /// `/api/weather/<icao>`: the latest METAR and TAF from aviationweather.gov and the current
