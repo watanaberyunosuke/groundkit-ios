@@ -8,11 +8,10 @@ private let now = try! Date("2026-10-06T02:00:00Z", strategy: .iso8601)
 private let syd = (lat: -33.946, lon: 151.177)
 
 private func history(_ callsign: String, _ dir: Direction, usual: String, days: Int = 10,
-                     other: String? = "MEL", iata: String? = nil, freighter: Bool? = nil,
-                     airline: String? = nil) -> CallsignHistory {
+                     other: String? = "MEL", iata: String? = nil, freighter: Bool? = nil) -> CallsignHistory {
     let parts = usual.split(separator: ":").compactMap { Double($0) }
     return CallsignHistory(callsign: callsign, dir: dir, other: other, n: days, usualMin: parts[0] * 60 + parts[1],
-                           days14: days, flightNumberIata: iata, airlineName: airline, isFreighter: freighter)
+                           days14: days, flightNumberIata: iata, airlineName: nil, isFreighter: freighter)
 }
 
 private func builder(_ rows: [CallsignHistory]) -> BoardBuilder {
@@ -153,7 +152,9 @@ struct BoardBuilderTests {
     }
 
     @Test func carrierFromHistoryElseTheFeed() throws {
-        let b = builder([history("QFA1", .inbound, usual: "15:30", airline: "Qantas")])
+        var qantas = history("QFA1", .inbound, usual: "15:30")
+        qantas.airlineName = "Qantas"
+        let b = builder([qantas])
         var known = aircraft("QFA1", kmNorth: 100)
         known.airlineName = "Qantas Airways"
         var passing = aircraft("QTR8082", kmNorth: 300, track: 0)
